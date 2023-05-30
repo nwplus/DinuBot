@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/nwplus/DinuBot/issues"
   },
-  "homepage": "https://github.com/nwplus/DinuBot#readme"
+  "homepage": "https://github.com/nwplus/DinuBot#readme",
+  "dependencies": {
+    "@slack/bolt": "^3.13.1",
+    "dotenv": "^16.0.3"
+  }
 }
