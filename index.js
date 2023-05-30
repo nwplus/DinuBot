@@ -15,13 +15,24 @@ const app = new App({
 });
 
 
-app.command("/test", async ({ command, say }) => {
+app.command("/test", async ({ command, event, say }) => {
     try {
-        say("Hello")
+        console.log(event)
+        say(`<@${event}> hello!`)
     } 
     
     catch (error) {
         console.error(error);
+    }
+});
+
+app.message("/hello/", async ({ command, say }) => {
+   console.log("ss") 
+    try {
+      say("bye");
+    } catch (error) {
+        console.log("err")
+      console.error(error);
     }
 });
 
