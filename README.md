@@ -6,7 +6,7 @@
 
 ## Running
 ```
-npm i
+yarn install
 node index.js
 ```
 

@@ -28,15 +28,17 @@ app.command("/test", async ({ command, event, say }) => {
     }
 });
 
-// app.message("hello", async ({ command, say }) => {
-//    console.log("Ran hello") 
-//     try {
-//       say("AHAHAHAHAHHAH");
-//     } catch (error) {
-//         console.log("err")
-//       console.error(error);
-//     }
-// });
+app.message("getMembersInChannel", async ({ command, say }) => {
+   console.log("Ran hello") 
+    try {
+      say("AHAHAHAHAHHAH");
+    } catch (error) {
+        console.log("err")
+      console.error(error);
+    }
+
+    getMembersInChannel("C05A02Q37FC")
+});
 
 async function getMembersInChannel(channelID) {
     const membersInChannel = []
@@ -66,7 +68,7 @@ async function getMembersInChannel(channelID) {
     }
   }
 
-getMembersInChannel("C05A02Q37FC")
+// getMembersInChannel("C05A02Q37FC")
 
 app.action("button_clicked", async ({ ack, body, say }) => {
     try {
