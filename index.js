@@ -38,12 +38,26 @@ app.command("/test", async ({ command, event, say }) => {
 //     }
 // });
 
-async function sendMessage(channel, message) {
+async function getMembersInChannel(channelID) {
+    const membersInChannel = []
     try {
-      const response = await slackClient.chat.postMessage({
-        channel: channel,
-        text: message,
-      });
+      const result = await slackClient.conversations.members({
+        channel: channelID
+      })
+      
+      memberIDs = result.members
+      for (memberID of memberIDs) {
+        const userInfo = await slackClient.users.info({
+          user: memberID,
+        });
+
+        membersInChannel.push(userInfo.user["real_name"])
+        // console.log(userInfo.user["real_name"])
+        const response = await slackClient.chat.postMessage({
+          channel: channelID,
+          text: userInfo.user["real_name"],
+        });
+      }
   
       console.log('Message sent successfully:', response.ts);
     } 
@@ -52,24 +66,36 @@ async function sendMessage(channel, message) {
     }
   }
 
-// sendMessage("C05A02Q37FC", "Hello, world!")
-app.action("button_clicked", async ({ body, say }) => {
-    console.log("Button clicked");
+getMembersInChannel("C05A02Q37FC")
 
-    const buttonValue = body.actions[0].value;
+app.action("button_clicked", async ({ ack, body, say }) => {
+    try {
+      await ack(); // Acknowledge the action request
   
-    if (buttonValue === "didDonut") {
-      console.log("Button was clicked");
-      say("Yay");
-    } else if (buttonValue === "scheduled") {
-      console.log("Another button was clicked");
-      say("Ok");
-    } else {
-      console.log("Unknown button action");
-      say("Smh");
+      const buttonValue = body.actions[0].value;
+  
+      if (buttonValue === "didDonut") {
+        // Handle the "Yes" button click
+        say("You clicked 'Yes'.");
+        // Perform the desired action for the "Yes" button
+        // ...
+      } else if (buttonValue === "scheduled") {
+        // Handle the "It's scheduled" button click
+        say("You clicked 'It's scheduled'.");
+        // Perform the desired action for the "It's scheduled" button
+        // ...
+      } else if (buttonValue === "notScheduled") {
+        // Handle the "Not yet" button click
+        say("You clicked 'Not yet'.");
+        // Perform the desired action for the "Not yet" button
+        // ...
+      } else {
+        say("Unknown button action.");
+      }
+    } catch (error) {
+      console.error('Error handling action:', error);
     }
   });
-  
 
 async function donutCheckin(channel, message, buttonAction) {
     try {
@@ -112,6 +138,6 @@ async function donutCheckin(channel, message, buttonAction) {
     }
 }
 
-donutCheckin("C05A02Q37FC", "Did you meet yet?", "button_clicked");
+// donutCheckin("C05A02Q37FC", "Time for a midpoint check-in! The next round of donuts go out on...", "button_clicked");
 
 app.start(3000)
