@@ -16,7 +16,6 @@ const app = new App({
     appToken: botAppToken // Token from the App-level Token that we created
 });
 
-
 app.command("/test", async ({ command, event, say }) => {
     try {
         console.log(event)
