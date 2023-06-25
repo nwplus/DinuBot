@@ -36,6 +36,29 @@ app.message("getMembersInChannel", async ({ command, say }) => {
 	getMembersInChannel("C05A02Q37FC");
 });
 
+app.message("createGroupChat", async ({ command, say }) => {
+	let userIds = "U03EJU7AVFD,U02HGHR0W3F"; // Donald and Yan's user ids for dev purposes
+	createGroupChatAndSendMessage(userIds, "Hello World!");
+});
+
+const createGroupChatAndSendMessage = async (userIds, messageText) => {
+	try {
+		const conversation = await slackClient.conversations.open({
+			users: userIds,
+			return_im: true,
+		});
+
+		if (conversation.ok) {
+			await slackClient.chat.postMessage({
+				channel: conversation.channel.id,
+				text: messageText,
+			});
+		}
+	} catch (error) {
+		console.error("Error creating group chat and sending message:", error);
+	}
+};
+
 async function getMembersInChannel(channelID) {
 	const membersInChannel = [];
 	try {
@@ -48,6 +71,10 @@ async function getMembersInChannel(channelID) {
 			const userInfo = await slackClient.users.info({
 				user: memberID,
 			});
+
+			// Log dev info
+			console.log(userInfo.user["real_name"]);
+			console.log(memberID);
 
 			membersInChannel.push(userInfo.user["real_name"]);
 			// console.log(userInfo.user)
