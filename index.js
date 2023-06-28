@@ -38,8 +38,37 @@ app.message("getMembersInChannel", async ({ command, say }) => {
 });
 
 app.message("createGroupChat", async ({ command, say }) => {
-	let userIds = "U03EJU7AVFD,U02HGHR0W3F"; // Donald and Yan's user ids for dev purposes
+	const userIds = "U03EJU7AVFD,U02HGHR0W3F"; // Donald and Yan's user ids for dev purposes
 	createGroupChatAndSendMessage(userIds, "Hello World!");
+});
+
+app.message("createMatching", async ({ command, say }) => {
+	const channelID = "C05A02Q37FC";
+	try {
+		const result = await slackClient.conversations.members({
+			channel: channelID,
+		});
+
+		memberIDs = result.members;
+		const matchings = getUserMatchings(memberIDs);
+		for (matching of matchings) {
+			const displayNames = [];
+			for (userId of matching) {
+				const userInfo = await slackClient.users.info({
+					user: userId,
+				});
+				const displayName = userInfo.user["profile"]["real_name"];
+				displayNames.push(displayName);
+			}
+			const messageText = `New donut!! ${displayNames.join(", ")}`;
+			await slackClient.chat.postMessage({
+				channel: channelID,
+				text: messageText,
+			});
+		}
+	} catch (error) {
+		console.error("Error creating matching:", error);
+	}
 });
 
 const createGroupChatAndSendMessage = async (userIds, messageText) => {
