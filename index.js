@@ -1,4 +1,4 @@
-const { App } = require("@slack/bolt");
+const { App, LogLevel } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
 const { getUserMatchings } = require("./src/matching");
 
@@ -15,6 +15,7 @@ const app = new App({
 	signingSecret: botSigningSecret, // Find in Basic Information Tab
 	socketMode: true,
 	appToken: botAppToken, // Token from the App-level Token that we created
+	logLevel: LogLevel.DEBUG, // Enable debug logging
 });
 
 app.command("/test", async ({ command, event, say }) => {
@@ -40,6 +41,14 @@ app.message("getMembersInChannel", async ({ command, say }) => {
 app.message("createGroupChat", async ({ command, say }) => {
 	const userIds = "U03EJU7AVFD,U02HGHR0W3F"; // Donald and Yan's user ids for dev purposes
 	createGroupChatAndSendMessage(userIds, "Hello World!");
+});
+
+app.message("donutCheckin", async ({ command, say }) => {
+	donutCheckin(
+		"C05A02Q37FC",
+		"Time for a midpoint check-in! The next round of donuts go out on...",
+		"button_clicked",
+	);
 });
 
 app.message("createMatching", async ({ command, say }) => {
@@ -123,10 +132,11 @@ async function getMembersInChannel(channelID) {
 
 // getMembersInChannel("C05A02Q37FC")
 
-app.action("button_clicked", async ({ ack, body, say }) => {
-	console.log("sshshsh");
+app.action("button_clicked", async ({ ack, say }) => {
+	console.log("before ack");
 	try {
 		await ack(); // Acknowledge the action request
+		console.log("after ack");
 
 		const buttonValue = body.actions[0].value;
 
@@ -160,6 +170,7 @@ async function donutCheckin(channel, message, buttonAction) {
 			text: message,
 			attachments: [
 				{
+					// type: "interactive_message",
 					text: "Click the button below:",
 					fallback: "You are unable to interact with this button.",
 					callback_id: buttonAction,
@@ -193,10 +204,17 @@ async function donutCheckin(channel, message, buttonAction) {
 	}
 }
 
-// donutCheckin(
-//   "C05A02Q37FC",
-//   "Time for a midpoint check-in! The next round of donuts go out on...",
-//   "button_clicked",
-// );
+/*
+donutCheckin(
+  "C05A02Q37FC",
+  "Time for a midpoint check-in! The next round of donuts go out on...",
+  "button_clicked",
+);
+*/
+
+app.error((error) => {
+	// Check the details of the error
+	console.error(error);
+});
 
 app.start(3000);
