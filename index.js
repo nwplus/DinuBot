@@ -43,17 +43,18 @@ app.message("createGroupChat", async ({ command, say }) => {
 });
 
 app.message("createMatching", async ({ command, say }) => {
-	const channelID = "C05A02Q37FC";
+	const channelID = "C05FLQKBEA0"; // dinubot-alpha-test channel id
 	try {
 		const result = await slackClient.conversations.members({
 			channel: channelID,
 		});
 
 		memberIDs = result.members;
-    // removes DinuBot from the list of members in a channel so no one gets paired up with it
-    memberIDs.splice(memberIDs.indexOf("U05A02QR4BU"), 1)
+		// removes DinuBot from the list of members in a channel so no one gets paired up with it
+		memberIDs.splice(memberIDs.indexOf("U05A02QR4BU"), 1);
 
 		const matchings = getUserMatchings(memberIDs);
+		console.log(matchings);
 		for (matching of matchings) {
 			const displayNames = [];
 			for (userId of matching) {
@@ -64,15 +65,26 @@ app.message("createMatching", async ({ command, say }) => {
 				displayNames.push(displayName);
 			}
 			const messageText = `New donut!! ${displayNames.join(", ")}`;
+			console.log(channelID);
 			await slackClient.chat.postMessage({
 				channel: channelID,
 				text: messageText,
 			});
+			const matchingString = formatUserIds(matching);
+			console.log(matchingString);
+			// createGroupChatAndSendMessage(
+			// 	matchingString,
+			// 	"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
+			// );
 		}
 	} catch (error) {
 		console.error("Error creating matching:", error);
 	}
 });
+
+function formatUserIds(ids) {
+	return ids.join(",");
+}
 
 const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	try {
