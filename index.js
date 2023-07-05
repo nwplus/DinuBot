@@ -18,8 +18,8 @@ const app = new App({
 
 app.command("/test", async ({ command, event, say }) => {
   try {
-    console.log(event);
-    say(`<@${event}> hello!`);
+    // console.log(event);
+    say(`Hi`);
   } catch (error) {
     console.error(error);
   }
