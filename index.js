@@ -50,6 +50,9 @@ app.message("createMatching", async ({ command, say }) => {
 		});
 
 		memberIDs = result.members;
+    // removes DinuBot from the list of members in a channel so no one gets paired up with it
+    memberIDs.splice(memberIDs.indexOf("U05A02QR4BU"), 1)
+
 		const matchings = getUserMatchings(memberIDs);
 		for (matching of matchings) {
 			const displayNames = [];
