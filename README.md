@@ -13,6 +13,8 @@ yarn install
 node index.js
 ```
 
+Remember to set up `.env`.
+
 ## Deploying
 
 <!--- Guide on how one would deploy this app -->
