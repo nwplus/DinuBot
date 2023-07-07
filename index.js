@@ -42,17 +42,21 @@ app.message("createGroupChat", async ({ command, say }) => {
 	createGroupChatAndSendMessage(userIds, "Hello World!");
 });
 
-app.message("createMatching", async ({ command, say }) => {
-	const channelID = "C05A02Q37FC";
+app.message("createMatching", async ({ command, context, say }) => {
+	const channelID = command.channel.id;
+
 	try {
 		const result = await slackClient.conversations.members({
 			channel: channelID,
 		});
 
 		memberIDs = result.members;
-    // removes DinuBot from the list of members in a channel so no one gets paired up with it
-    memberIDs.splice(memberIDs.indexOf("U05A02QR4BU"), 1)
-
+    // Removes DinuBot from the list of members in a channel so no one gets paired up with it
+    const botUserID = context.botUserId;
+    const botIndex = memberIDs.indexOf(botUserID);
+    if (botIndex !== -1) {
+      memberIDs.splice(botIndex, 1);
+    }
 		const matchings = getUserMatchings(memberIDs);
 		for (matching of matchings) {
 			const displayNames = [];
