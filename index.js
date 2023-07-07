@@ -42,9 +42,8 @@ app.message("createGroupChat", async ({ command, say }) => {
 	createGroupChatAndSendMessage(userIds, "Hello World!");
 });
 
-app.message("createMatching", async ({ command, context, say }) => {
-	const channelID = command.channel.id;
-
+app.message("createMatching", async ({ command, say }) => {
+	const channelID = "C05A02Q37FC";
 	try {
 		const result = await slackClient.conversations.members({
 			channel: channelID,
@@ -58,6 +57,7 @@ app.message("createMatching", async ({ command, context, say }) => {
       memberIDs.splice(botIndex, 1);
     }
 		const matchings = getUserMatchings(memberIDs);
+		console.log(matchings);
 		for (matching of matchings) {
 			const displayNames = [];
 			for (userId of matching) {
@@ -68,15 +68,26 @@ app.message("createMatching", async ({ command, context, say }) => {
 				displayNames.push(displayName);
 			}
 			const messageText = `New donut!! ${displayNames.join(", ")}`;
+			console.log(channelID);
 			await slackClient.chat.postMessage({
 				channel: channelID,
 				text: messageText,
 			});
+			const matchingString = formatUserIds(matching);
+			console.log(matchingString);
+			// createGroupChatAndSendMessage(
+			// 	matchingString,
+			// 	"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
+			// );
 		}
 	} catch (error) {
 		console.error("Error creating matching:", error);
 	}
 });
+
+function formatUserIds(ids) {
+	return ids.join(",");
+}
 
 const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	try {
