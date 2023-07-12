@@ -26,7 +26,7 @@ app.command("/test", async ({ command, event, say }) => {
 	}
 });
 
-app.message("getMembersInChannel", async ({ command, say }) => {
+app.message("getMembersInChannel", async ({ channel, command, say }) => {
 	console.log("Ran hello");
 	try {
 		say("AHAHAHAHAHHAH");
@@ -37,13 +37,16 @@ app.message("getMembersInChannel", async ({ command, say }) => {
 	getMembersInChannel("C05A02Q37FC");
 });
 
+// testing purposes
 app.message("createGroupChat", async ({ command, say }) => {
 	const userIds = "U03EJU7AVFD,U02HGHR0W3F"; // Donald and Yan's user ids for dev purposes
 	createGroupChatAndSendMessage(userIds, "Hello World!");
 });
 
+
 app.message("createMatching", async ({ command, say }) => {
-	const channelID = "C05A02Q37FC";
+	// const channelID = "C05A02Q37FC";
+	const channelID = "C05FLQKBEA0";
 	try {
 		const result = await slackClient.conversations.members({
 			channel: channelID,
@@ -51,7 +54,8 @@ app.message("createMatching", async ({ command, say }) => {
 
 		memberIDs = result.members;
     // Removes DinuBot from the list of members in a channel so no one gets paired up with it
-    const botUserID = context.botUserId;
+    // const botUserID = context.botUserId;
+	const botUserID = "U05A02QR4BU";
     const botIndex = memberIDs.indexOf(botUserID);
     if (botIndex !== -1) {
       memberIDs.splice(botIndex, 1);
@@ -79,6 +83,11 @@ app.message("createMatching", async ({ command, say }) => {
 			// 	matchingString,
 			// 	"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
 			// );
+			createGroupChatAndSendMessage(
+				matchingString,
+				"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
+			);
+
 		}
 	} catch (error) {
 		console.error("Error creating matching:", error);
@@ -95,12 +104,31 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			users: userIds,
 			return_im: true,
 		});
+		
+		const date = new Date();
+		date.setDate(date.getDate());
 
 		if (conversation.ok) {
 			await slackClient.chat.postMessage({
 				channel: conversation.channel.id,
 				text: messageText,
 			});
+
+			try {
+				const threeDaysFromNow = new Date();
+				threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+				// const oneMinuteFromNow = new Date();
+				// oneMinuteFromNow.setTime(oneMinuteFromNow.getDate() + 1 * 60 * 1000); // Adding 1 minute in milliseconds
+				
+				const checkinMessage = await slackClient.chat.scheduleMessage({
+				  channel: conversation.channel.id,
+				  text: "Did you meet yet?",
+				  post_at: Math.floor(threeDaysFromNow.getTime() / 1000)
+				});
+			  }
+			  catch (error) {
+				console.error(error);
+			  }
 		}
 	} catch (error) {
 		console.error("Error creating group chat and sending message:", error);
