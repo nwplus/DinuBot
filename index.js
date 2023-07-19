@@ -1,6 +1,7 @@
 const { App } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
 const { getUserMatchings } = require("./src/matching");
+const { formatUserIds } = require("./src/utils");
 
 require("dotenv").config();
 
@@ -16,6 +17,8 @@ const app = new App({
 	socketMode: true,
 	appToken: botAppToken, // Token from the App-level Token that we created
 });
+
+// Commands (for dev)
 
 app.command("/test", async ({ command, event, say }) => {
 	try {
@@ -37,7 +40,6 @@ app.message("getMembersInChannel", async ({ channel, command, say }) => {
 	getMembersInChannel("C05A02Q37FC");
 });
 
-// testing purposes
 app.message("createGroupChat", async ({ command, say }) => {
 	const userIds = "U03EJU7AVFD,U02HGHR0W3F"; // Donald and Yan's user ids for dev purposes
 	createGroupChatAndSendMessage(userIds, "Hello World!");
@@ -52,18 +54,22 @@ app.message("donutCheckin", async ({ command, say }) => {
 });
 
 app.message("createMatching", async ({ command, say }) => {
-	// const channelID = "C05A02Q37FC";
-	const channelID = "C05FLQKBEA0";
+	// Temporarily multiple channel ids for dev
+	const dinubotTestChannelID = "C05A02Q37FC";
+	const dinubotAlphaTestChannelID = "C05FLQKBEA0";
+
+	const channelID = dinubotAlphaTestChannelID;
 	try {
-		const result = await slackClient.conversations.members({
+		const membersInfo = await slackClient.conversations.members({
 			channel: channelID,
 		});
 
-		memberIDs = result.members;
-		// Removes DinuBot from the list of members in a channel so no one gets paired up with it
-		// const botUserID = context.botUserId;
-		const botUserID = "U05A02QR4BU";
-		const botIndex = memberIDs.indexOf(botUserID);
+		memberIDs = membersInfo.members;
+
+		// Remove DinuBot from the list of members in a channel so no one gets paired up with it
+		const dinubotUserID = "U05A02QR4BU";
+		const botIndex = memberIDs.indexOf(dinubotUserID);
+
 		if (botIndex !== -1) {
 			memberIDs.splice(botIndex, 1);
 		}
@@ -86,10 +92,7 @@ app.message("createMatching", async ({ command, say }) => {
 			});
 			const matchingString = formatUserIds(matching);
 			console.log(matchingString);
-			// createGroupChatAndSendMessage(
-			// 	matchingString,
-			// 	"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
-			// );
+
 			createGroupChatAndSendMessage(
 				matchingString,
 				"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
@@ -100,9 +103,7 @@ app.message("createMatching", async ({ command, say }) => {
 	}
 });
 
-function formatUserIds(ids) {
-	return ids.join(",");
-}
+// Functionality
 
 const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	try {
@@ -140,7 +141,7 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	}
 };
 
-async function getMembersInChannel(channelID) {
+const getMembersInChannel = async (channelID) => {
 	const membersInChannel = [];
 	try {
 		const result = await slackClient.conversations.members({
@@ -170,9 +171,9 @@ async function getMembersInChannel(channelID) {
 	} catch (error) {
 		console.error("Error sending message:", error);
 	}
-}
+};
 
-// getMembersInChannel("C05A02Q37FC")
+// Button
 
 app.action({ callback_id: "button_clicked" }, async ({ ack, body, say }) => {
 	try {
@@ -203,7 +204,7 @@ app.action({ callback_id: "button_clicked" }, async ({ ack, body, say }) => {
 	}
 });
 
-async function donutCheckin(channel, message, buttonAction) {
+const donutCheckin = async (channel, message, buttonAction) => {
 	try {
 		const response = await slackClient.chat.postMessage({
 			channel: channel,
@@ -241,6 +242,6 @@ async function donutCheckin(channel, message, buttonAction) {
 	} catch (error) {
 		console.error("Error sending message:", error);
 	}
-}
+};
 
 app.start(3000);
