@@ -2,6 +2,7 @@ const { App } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
 const { getUserMatchings } = require("./src/matching");
 const { formatUserIds } = require("./src/utils");
+const { getMembersInChannel } = require("./src/dev_utils");
 
 require("dotenv").config();
 
@@ -30,14 +31,12 @@ app.command("/test", async ({ command, event, say }) => {
 });
 
 app.message("getMembersInChannel", async ({ channel, command, say }) => {
-	console.log("Ran hello");
 	try {
-		say("AHAHAHAHAHHAH");
+		say("Printing members in channel to console...");
+		getMembersInChannel(slackClient, "C05A02Q37FC"); // dinubot-test channel
 	} catch (error) {
 		console.error("Error getting members in channel:", error);
 	}
-
-	getMembersInChannel("C05A02Q37FC");
 });
 
 app.message("createGroupChat", async ({ command, say }) => {
@@ -93,10 +92,10 @@ app.message("createMatching", async ({ command, say }) => {
 			const matchingString = formatUserIds(matching);
 			console.log(matchingString);
 
-			createGroupChatAndSendMessage(
-				matchingString,
-				"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
-			);
+			// createGroupChatAndSendMessage(
+			// 	matchingString,
+			// 	"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
+			// );
 		}
 	} catch (error) {
 		console.error("Error creating matching:", error);
@@ -138,38 +137,6 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 		}
 	} catch (error) {
 		console.error("Error creating group chat and sending message:", error);
-	}
-};
-
-const getMembersInChannel = async (channelID) => {
-	const membersInChannel = [];
-	try {
-		const result = await slackClient.conversations.members({
-			channel: channelID,
-		});
-
-		memberIDs = result.members;
-		for (memberID of memberIDs) {
-			const userInfo = await slackClient.users.info({
-				user: memberID,
-			});
-
-			// Log dev info
-			console.log(userInfo.user["real_name"]);
-			console.log(memberID);
-
-			membersInChannel.push(userInfo.user["real_name"]);
-			// console.log(userInfo.user)
-			// console.log(userInfo.user["real_name"])
-			const response = await slackClient.chat.postMessage({
-				channel: channelID,
-				text: userInfo.user["profile"]["display_name"],
-			});
-		}
-
-		console.log("Message sent successfully:", response.ts);
-	} catch (error) {
-		console.error("Error sending message:", error);
 	}
 };
 
