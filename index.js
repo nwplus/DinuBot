@@ -43,6 +43,13 @@ app.message("createGroupChat", async ({ command, say }) => {
 	createGroupChatAndSendMessage(userIds, "Hello World!");
 });
 
+app.message("donutCheckin", async ({ command, say }) => {
+	donutCheckin(
+		"C05A02Q37FC",
+		"Time for a midpoint check-in! The next round of donuts go out on...",
+		"button_clicked",
+	);
+});
 
 app.message("createMatching", async ({ command, say }) => {
 	// const channelID = "C05A02Q37FC";
@@ -53,13 +60,13 @@ app.message("createMatching", async ({ command, say }) => {
 		});
 
 		memberIDs = result.members;
-    // Removes DinuBot from the list of members in a channel so no one gets paired up with it
-    // const botUserID = context.botUserId;
-	const botUserID = "U05A02QR4BU";
-    const botIndex = memberIDs.indexOf(botUserID);
-    if (botIndex !== -1) {
-      memberIDs.splice(botIndex, 1);
-    }
+		// Removes DinuBot from the list of members in a channel so no one gets paired up with it
+		// const botUserID = context.botUserId;
+		const botUserID = "U05A02QR4BU";
+		const botIndex = memberIDs.indexOf(botUserID);
+		if (botIndex !== -1) {
+			memberIDs.splice(botIndex, 1);
+		}
 		const matchings = getUserMatchings(memberIDs);
 		console.log(matchings);
 		for (matching of matchings) {
@@ -87,7 +94,6 @@ app.message("createMatching", async ({ command, say }) => {
 				matchingString,
 				"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
 			);
-
 		}
 	} catch (error) {
 		console.error("Error creating matching:", error);
@@ -104,7 +110,7 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			users: userIds,
 			return_im: true,
 		});
-		
+
 		const date = new Date();
 		date.setDate(date.getDate());
 
@@ -119,16 +125,15 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 				threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 				// const oneMinuteFromNow = new Date();
 				// oneMinuteFromNow.setTime(oneMinuteFromNow.getDate() + 1 * 60 * 1000); // Adding 1 minute in milliseconds
-				
+
 				const checkinMessage = await slackClient.chat.scheduleMessage({
-				  channel: conversation.channel.id,
-				  text: "Did you meet yet?",
-				  post_at: Math.floor(threeDaysFromNow.getTime() / 1000)
+					channel: conversation.channel.id,
+					text: "Did you meet yet?",
+					post_at: Math.floor(threeDaysFromNow.getTime() / 1000),
 				});
-			  }
-			  catch (error) {
+			} catch (error) {
 				console.error(error);
-			  }
+			}
 		}
 	} catch (error) {
 		console.error("Error creating group chat and sending message:", error);
@@ -169,8 +174,7 @@ async function getMembersInChannel(channelID) {
 
 // getMembersInChannel("C05A02Q37FC")
 
-app.action("button_clicked", async ({ ack, body, say }) => {
-	console.log("sshshsh");
+app.action({ callback_id: "button_clicked" }, async ({ ack, body, say }) => {
 	try {
 		await ack(); // Acknowledge the action request
 
@@ -238,11 +242,5 @@ async function donutCheckin(channel, message, buttonAction) {
 		console.error("Error sending message:", error);
 	}
 }
-
-// donutCheckin(
-//   "C05A02Q37FC",
-//   "Time for a midpoint check-in! The next round of donuts go out on...",
-//   "button_clicked",
-// );
 
 app.start(3000);
