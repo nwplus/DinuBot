@@ -4,7 +4,30 @@ const { getUserMatchings } = require("./src/matching");
 const { formatUserIds } = require("./src/utils");
 const { getMembersInChannel } = require("./src/dev_utils");
 
+// Import the functions you need from the SDKs you need
+const { initializeApp } = require("firebase/app");
+// const { getAnalytics } = require("firebase/analytics");
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
 require("dotenv").config();
+
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: process.env.apiKey,
+  authDomain: process.env.authDomain,
+  databaseURL: process.env.databaseURL,
+  projectId: process.env.projectId,
+  storageBucket: process.env.storageBucket,
+  messagingSenderId: process.env.messagingSenderId,
+  appId: process.env.appId,
+  measurementId: process.env.measurementId
+};
+
+// Initialize Firebase
+const firebaseApp = initializeApp(firebaseConfig);
 
 const botToken = process.env.token;
 const botSigningSecret = process.env.signingSecret;
@@ -12,7 +35,7 @@ const botAppToken = process.env.appToken;
 
 const slackClient = new WebClient(botToken);
 
-const app = new App({
+const slackBot = new App({
 	token: botToken, //Find in the Oauth  & Permissions tab
 	signingSecret: botSigningSecret, // Find in Basic Information Tab
 	socketMode: true,
@@ -21,7 +44,7 @@ const app = new App({
 
 // Commands (for dev)
 
-app.command("/test", async ({ command, event, say }) => {
+slackBot.command("/test", async ({ command, event, say }) => {
 	try {
 		console.log(event);
 		say(`<@${event}> hello!`);
@@ -30,7 +53,7 @@ app.command("/test", async ({ command, event, say }) => {
 	}
 });
 
-app.message("getMembersInChannel", async ({ channel, command, say }) => {
+slackBot.message("getMembersInChannel", async ({ channel, command, say }) => {
 	try {
 		say("Printing members in channel to console...");
 		getMembersInChannel(slackClient, "C05A02Q37FC"); // dinubot-test channel
@@ -39,12 +62,12 @@ app.message("getMembersInChannel", async ({ channel, command, say }) => {
 	}
 });
 
-app.message("createGroupChat", async ({ command, say }) => {
+slackBot.message("createGroupChat", async ({ command, say }) => {
 	const userIds = "U03EJU7AVFD,U02HGHR0W3F"; // Donald and Yan's user ids for dev purposes
 	createGroupChatAndSendMessage(userIds, "Hello World!");
 });
 
-app.message("donutCheckin", async ({ command, say }) => {
+slackBot.message("donutCheckin", async ({ command, say }) => {
 	donutCheckin(
 		"C05A02Q37FC",
 		"Time for a midpoint check-in! The next round of donuts go out on...",
@@ -52,7 +75,7 @@ app.message("donutCheckin", async ({ command, say }) => {
 	);
 });
 
-app.message("createMatching", async ({ command, say }) => {
+slackBot.message("createMatching", async ({ command, say }) => {
 	// Temporarily multiple channel ids for dev
 	const dinubotTestChannelID = "C05A02Q37FC";
 	const dinubotAlphaTestChannelID = "C05FLQKBEA0";
@@ -142,7 +165,7 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 
 // Button
 
-app.action({ callback_id: "button_clicked" }, async ({ ack, body, say }) => {
+slackBot.action({ callback_id: "button_clicked" }, async ({ ack, body, say }) => {
 	try {
 		await ack(); // Acknowledge the action request
 
@@ -211,4 +234,12 @@ const donutCheckin = async (channel, message, buttonAction) => {
 	}
 };
 
-app.start(3000);
+slackBot.message("getFirebaseData", async ({command, say}) => {
+	const dinuBot = collection(db, "InternalProjects");
+	await slackClient.chat.postMessage({
+		channel: conversation.channel.id,
+		text: "oK",
+	});
+})
+
+slackBot.start(3000);
