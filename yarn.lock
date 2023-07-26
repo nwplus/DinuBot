@@ -486,6 +486,20 @@
     node-fetch "2.6.7"
     tslib "^2.1.0"
 
+"@firebase/firestore@^4.1.0":
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/@firebase/firestore/-/firestore-4.1.0.tgz#fcdd4e033c258fccbe4d47dadf625faa1f62272f"
+  integrity sha512-FEd+4R0QL9RAJVcdqXgbdIuQYpvzkeKNBVxNM5qcWDPMurjNpja8VaWpVZmT3JXG8FfO+NGTnHJtsW/nWO7XiQ==
+  dependencies:
+    "@firebase/component" "0.6.4"
+    "@firebase/logger" "0.4.0"
+    "@firebase/util" "1.9.3"
+    "@firebase/webchannel-wrapper" "0.10.1"
+    "@grpc/grpc-js" "~1.8.17"
+    "@grpc/proto-loader" "^0.6.13"
+    node-fetch "2.6.7"
+    tslib "^2.1.0"
+
 "@firebase/functions-compat@0.3.5":
   version "0.3.5"
   resolved "https://registry.npmjs.org/@firebase/functions-compat/-/functions-compat-0.3.5.tgz"

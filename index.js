@@ -6,6 +6,7 @@ const { getMembersInChannel } = require("./src/dev_utils");
 
 // Import the functions you need from the SDKs you need
 const { initializeApp } = require("firebase/app");
+const { getFirestore, collection, getDocs } = require("firebase/firestore"); // Import Firestore related functions
 // const { getAnalytics } = require("firebase/analytics");
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -28,6 +29,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(); // Initialize Firestore
 
 const botToken = process.env.token;
 const botSigningSecret = process.env.signingSecret;
@@ -235,9 +237,15 @@ const donutCheckin = async (channel, message, buttonAction) => {
 };
 
 slackBot.message("getFirebaseData", async ({command, say}) => {
-	const dinuBot = collection(db, "InternalProjects");
+	const dinuBotCollection = collection(db, "InternalProjects");
+    // Do something with the collection, like querying or adding documents
+    const querySnapshot = await getDocs(dinuBotCollection);
+    // querySnapshot.forEach((doc) => {
+    //   console.log(doc.id, " => ", doc.data());
+    // });
+
 	await slackClient.chat.postMessage({
-		channel: conversation.channel.id,
+		channel: "C05A02Q37FC",
 		text: "oK",
 	});
 })
