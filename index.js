@@ -250,4 +250,13 @@ slackBot.message("getFirebaseData", async ({command, say}) => {
 	});
 })
 
+async function test() {
+	const dinuBotCollection = collection(db, "InternalProjects");
+    // Do something with the collection, like querying or adding documents
+    const querySnapshot = await getDocs(dinuBotCollection);
+	// console.log(querySnapshot)
+}
+
+test()
+
 slackBot.start(3000);
