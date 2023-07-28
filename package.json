@@ -22,7 +22,8 @@
 		"@slack/bolt": "^3.13.1",
 		"@slack/web-api": "^6.8.1",
 		"dotenv": "^16.1.4",
-		"firebase": "^10.1.0"
+		"firebase": "^10.1.0",
+		"firebase-admin": "^11.10.1"
 	},
 	"devDependencies": {
 		"jest": "^29.5.0",
