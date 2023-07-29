@@ -4,32 +4,22 @@ const { getUserMatchings } = require("./src/matching");
 const { formatUserIds } = require("./src/utils");
 const { getMembersInChannel } = require("./src/dev_utils");
 
-// Import the functions you need from the SDKs you need
-const { initializeApp } = require("firebase/app");
-const { getFirestore, collection, getDocs } = require("firebase/firestore"); // Import Firestore related functions
+const { initializeApp, applicationDefault } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore"); // Import Firestore related functions
+
 // const { getAnalytics } = require("firebase/analytics");
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 require("dotenv").config();
 
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: process.env.apiKey,
-  authDomain: process.env.authDomain,
-  databaseURL: process.env.databaseURL,
-  projectId: process.env.projectId,
-  storageBucket: process.env.storageBucket,
-  messagingSenderId: process.env.messagingSenderId,
-  appId: process.env.appId,
-  measurementId: process.env.measurementId
-};
+initializeApp({
+	credential: applicationDefault(),
+	databaseURL: "https://nwplus-ubc-dev.firebaseio.com",
+});
 
 // Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(); // Initialize Firestore
+const db = getFirestore();
 
 const botToken = process.env.token;
 const botSigningSecret = process.env.signingSecret;
@@ -167,34 +157,37 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 
 // Button
 
-slackBot.action({ callback_id: "button_clicked" }, async ({ ack, body, say }) => {
-	try {
-		await ack(); // Acknowledge the action request
+slackBot.action(
+	{ callback_id: "button_clicked" },
+	async ({ ack, body, say }) => {
+		try {
+			await ack(); // Acknowledge the action request
 
-		const buttonValue = body.actions[0].value;
+			const buttonValue = body.actions[0].value;
 
-		if (buttonValue === "didDonut") {
-			// Handle the "Yes" button click
-			say("You clicked 'Yes'.");
-			// Perform the desired action for the "Yes" button
-			// ...
-		} else if (buttonValue === "scheduled") {
-			// Handle the "It's scheduled" button click
-			say("You clicked 'It's scheduled'.");
-			// Perform the desired action for the "It's scheduled" button
-			// ...
-		} else if (buttonValue === "notScheduled") {
-			// Handle the "Not yet" button click
-			say("You clicked 'Not yet'.");
-			// Perform the desired action for the "Not yet" button
-			// ...
-		} else {
-			say("Unknown button action.");
+			if (buttonValue === "didDonut") {
+				// Handle the "Yes" button click
+				say("You clicked 'Yes'.");
+				// Perform the desired action for the "Yes" button
+				// ...
+			} else if (buttonValue === "scheduled") {
+				// Handle the "It's scheduled" button click
+				say("You clicked 'It's scheduled'.");
+				// Perform the desired action for the "It's scheduled" button
+				// ...
+			} else if (buttonValue === "notScheduled") {
+				// Handle the "Not yet" button click
+				say("You clicked 'Not yet'.");
+				// Perform the desired action for the "Not yet" button
+				// ...
+			} else {
+				say("Unknown button action.");
+			}
+		} catch (error) {
+			console.error("Error handling action:", error);
 		}
-	} catch (error) {
-		console.error("Error handling action:", error);
-	}
-});
+	},
+);
 
 const donutCheckin = async (channel, message, buttonAction) => {
 	try {
@@ -236,27 +229,27 @@ const donutCheckin = async (channel, message, buttonAction) => {
 	}
 };
 
-slackBot.message("getFirebaseData", async ({command, say}) => {
-	const dinuBotCollection = collection(db, "InternalProjects");
-    // Do something with the collection, like querying or adding documents
-    const querySnapshot = await getDocs(dinuBotCollection);
-    // querySnapshot.forEach((doc) => {
-    //   console.log(doc.id, " => ", doc.data());
-    // });
+slackBot.message("getFirebaseData", async ({ command, say }) => {
+	let documentRef = db.doc("InternalProjects/DinuBot");
+
+	documentRef.get().then((documentSnapshot) => {
+		let data = documentSnapshot.data();
+		console.log(`Retrieved data: ${JSON.stringify(data)}`);
+	});
 
 	await slackClient.chat.postMessage({
 		channel: "C05A02Q37FC",
 		text: "oK",
 	});
-})
+});
 
-async function test() {
-	const dinuBotCollection = collection(db, "InternalProjects");
-    // Do something with the collection, like querying or adding documents
-    const querySnapshot = await getDocs(dinuBotCollection);
-	// console.log(querySnapshot)
-}
+// async function test() {
+// const dinuBotCollection = collection(db, "InternalProjects");
+// // Do something with the collection, like querying or adding documents
+// const querySnapshot = await getDocs(dinuBotCollection);
+// // console.log(querySnapshot)
+// }
 
-test()
+// test();
 
 slackBot.start(3000);
