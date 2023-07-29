@@ -231,7 +231,7 @@ const donutCheckin = async (channel, message, buttonAction) => {
 
 slackBot.message("getFirebaseData", async ({ command, say }) => {
 	let documentRef = db.doc("InternalProjects/DinuBot");
-
+	console.log(documentRef);
 	documentRef.get().then((documentSnapshot) => {
 		let data = documentSnapshot.data();
 		console.log(`Retrieved data: ${JSON.stringify(data)}`);
@@ -243,13 +243,58 @@ slackBot.message("getFirebaseData", async ({ command, say }) => {
 	});
 });
 
-// async function test() {
-// const dinuBotCollection = collection(db, "InternalProjects");
-// // Do something with the collection, like querying or adding documents
-// const querySnapshot = await getDocs(dinuBotCollection);
-// // console.log(querySnapshot)
-// }
+async function convertTimeStamp(unix_timestamp) {
+	// Create a new JavaScript Date object based on the timestamp
+	// multiplied by 1000 so that the argument is in milliseconds, not seconds.
+	var date = new Date(unix_timestamp["_seconds"] * 1000);
+	// Minutes part from the timestamp
+	var day = date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate();
+	return [day, date.getHours()];
+}
 
-// test();
+// Determines if it's time to send out new donuts (runs on interval) 
+async function timeForDonutScheduler() {
+	let dinuBotData = db.doc("InternalProjects/DinuBot");
+	dinuBotData.get().then((documentSnapshot) => {
+		let statusData = documentSnapshot.data()["Status"];
+		convertTimeStamp(statusData["schedule"]["nextDonut"]["dateToPairMembers"]).then(function(nextDonutDay) {
+		const nextDonutDate = nextDonutDay[0];
+		const nextDonutHour = nextDonutDay[1];
+
+		// Today
+		const today = new Date();
+		const currentDate = today.getFullYear() + '-' + today.getMonth() + '-' + today.getDate();
+		const currentHour = today.getHours();
+		// Today ^^6
+
+		// console.log(currentDate + " == " + nextDonutDate);
+		// console.log(currentHour + " == " + nextDonutHour);
+		// Determine if we should pair members up now
+		if (currentDate == nextDonutDate && currentHour == nextDonutHour) {
+			//.... // pair people up
+			// statusData["groupOfMembers"]["groupOfMemberDynamic"] = ...;
+			// statusData["groupOfMembers"]["groupOfMemberStatic"] = ...;
+			const nextDonutDate = new Date();
+			nextDonutDate.setDate(nextDonutDate.getDate() + 14);
+			statusData["schedule"]["nextDonut"]["sent"] = true; // set sent to True (is this necessary?)
+			statusData["schedule"]["nextDonut"]["dateToPairMembers"] = nextDonutDate; // set next donut date
+			statusData["schedule"]["nextDonut"]["sent"] = false; // set sent to False (is this necessary?)
+			// update data
+			dinuBotData.firestore.doc("InternalProjects/DinuBot").update({Status: statusData})
+		}
+		else {
+			console.log("Not time for donut yet")
+		}
+	});});
+}
+
+// runs interval to schedule donuts and update variables
+// change this to 30 later, only need to run this every 30mins, not 0.2mins
+var minutes = 0.20, the_interval = minutes * 60 * 1000;
+setInterval(function() {
+  // Check if donuts should be sent
+  timeForDonutScheduler()
+  // check if new members have been added (maybe a member join or leave event?)
+}, the_interval);
 
 slackBot.start(3000);
