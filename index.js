@@ -246,9 +246,9 @@ slackBot.message("getFirebaseData", async ({ command, say }) => {
 async function convertTimeStamp(unix_timestamp) {
 	// Create a new JavaScript Date object based on the timestamp
 	// multiplied by 1000 so that the argument is in milliseconds, not seconds.
-	var date = new Date(unix_timestamp["_seconds"] * 1000);
+	const date = new Date(unix_timestamp["_seconds"] * 1000);
 	// Minutes part from the timestamp
-	var day = date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate();
+	const day = date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate();
 	return [day, date.getHours()];
 }
 
@@ -290,11 +290,13 @@ async function timeForDonutScheduler() {
 
 // runs interval to schedule donuts and update variables
 // change this to 30 later, only need to run this every 30mins, not 0.2mins
-var minutes = 0.20, the_interval = minutes * 60 * 1000;
+const minutes = 30, the_interval = minutes * 60 * 1000;
 setInterval(function() {
   // Check if donuts should be sent
   timeForDonutScheduler()
   // check if new members have been added (maybe a member join or leave event?)
 }, the_interval);
+
+
 
 slackBot.start(3000);
