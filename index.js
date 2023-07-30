@@ -139,13 +139,11 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			try {
 				const sevenDaysFromNow = new Date();
 				sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-				// const oneMinuteFromNow = new Date();
-				// oneMinuteFromNow.setTime(oneMinuteFromNow.getDate() + 1 * 60 * 1000); // Adding 1 minute in milliseconds
 
 				const checkinMessage = await slackClient.chat.scheduleMessage({
 					channel: conversation.channel.id,
-					text: "Did you meet yet?",
-					post_at: Math.floor(sevenDaysFromNow.getTime() / 1000),
+					text: "Time for a midpoint check-in! The next round of donuts go out next Monday! Did you meet yet? (buttons coming soon)",
+					post_at: Math.floor(sevenDaysFromNow.getTime() / 1000)
 				});
 			} catch (error) {
 				console.error(error);
@@ -287,19 +285,19 @@ async function pairMembers(staticArray, dynamicArray) {
 				const displayName = userInfo.user["profile"]["real_name"];
 				displayNames.push(displayName);
 			}
-			const messageText = `New donut!! ${displayNames.join(", ")}`;
-			// console.log(channelID);
-			await slackClient.chat.postMessage({
-				channel: channelID,
-				text: messageText,
-			});
+			// const messageText = `New donut!! ${displayNames.join(", ")}`;
+			// // console.log(channelID);
+			// await slackClient.chat.postMessage({
+			// 	channel: channelID,
+			// 	text: messageText,
+			// });
 			const matchingString = formatUserIds(matching);
 			// console.log(matchingString);
 
-			// createGroupChatAndSendMessage(
-			// 	matchingString,
-			// 	"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
-			// );
+			createGroupChatAndSendMessage(
+				matchingString,
+				"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
+			);
 		}
 		return [staticArray, updatedDynamicArray];
 	} catch (error) {
@@ -408,7 +406,9 @@ setInterval(function() {
 
 // ------------------------------------------------------ ^^^
 
-timeForDonutScheduler()
+// for testing purposes
+
+// timeForDonutScheduler()
 
 // put this into scheduler later
 // let dinuBotData = db.doc("InternalProjects/DinuBot");
