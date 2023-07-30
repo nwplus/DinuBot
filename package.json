@@ -1,0 +1,32 @@
+{
+	"name": "dinubot",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "jest",
+		"format": "prettier --write \"**/*.{js,json,css,md}\""
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/nwplus/DinuBot.git"
+	},
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/nwplus/DinuBot/issues"
+	},
+	"homepage": "https://github.com/nwplus/DinuBot#readme",
+	"dependencies": {
+		"@firebase/firestore": "^4.1.0",
+		"@slack/bolt": "^3.13.1",
+		"@slack/web-api": "^6.8.1",
+		"dotenv": "^16.1.4",
+		"firebase": "^10.1.0",
+		"firebase-admin": "^11.10.1"
+	},
+	"devDependencies": {
+		"jest": "^29.5.0",
+		"prettier": "^2.8.8"
+	}
+}
