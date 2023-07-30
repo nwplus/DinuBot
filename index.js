@@ -377,8 +377,8 @@ async function timeForDonutScheduler() {
 			let currentDynamicArray = statusData["groupOfMembers"]["groupOfMembersDynamic"];
 			updateMemberArrays(currentStaticArray, currentDynamicArray).then(function (updatedArrays) {
 				pairMembers(updatedArrays[0], updatedArrays[1]).then(function (updatedArrays) { // pair people up
-					statusData["groupOfMembers"]["groupOfMemberStatic"] = updatedArrays[0] // even if it's static, update it in case members join/leave
-					statusData["groupOfMembers"]["groupOfMemberDynamic"] = updatedArrays[1]
+					statusData["groupOfMembers"]["groupOfMembersStatic"] = updatedArrays[0] // even if it's static, update it in case members join/leave
+					statusData["groupOfMembers"]["groupOfMembersDynamic"] = updatedArrays[1]
 					const nextDonutDate = new Date();
 					nextDonutDate.setDate(nextDonutDate.getDate() + 14);
 					statusData["schedule"]["nextDonut"]["sent"] = true; // set sent to True (is this necessary?)
