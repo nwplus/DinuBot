@@ -257,19 +257,19 @@ async function pairMembers(staticArray, dynamicArray) {
 	// console.log(dynamicArray)
 	// Temporarily multiple channel ids for dev
 	// const channelID = "C05A02Q37FC"; // dinutest
-	const channelID = "C05FLQKBEA0"; // alpha
+	const channelID = process.env.channelID
 	try {
 		const membersInfo = await slackClient.conversations.members({
 			channel: channelID,
 		});
 
 		// Get members in channel + Remove DinuBot from the list of members in a channel so no one gets paired up with it
-		memberIDs = membersInfo.members;
-		const dinubotUserID = "U05A02QR4BU";
-		const botIndex = memberIDs.indexOf(dinubotUserID);
-		if (botIndex !== -1) {
-			memberIDs.splice(botIndex, 1);
-		}
+		// memberIDs = membersInfo.members;
+		// const dinubotUserID = "U05A02QR4BU";
+		// const botIndex = memberIDs.indexOf(dinubotUserID);
+		// if (botIndex !== -1) {
+		// 	memberIDs.splice(botIndex, 1);
+		// }
 
 		// -------------- If member is not in either static or dynamic array, add them
 		
@@ -311,7 +311,7 @@ async function pairMembers(staticArray, dynamicArray) {
 async function updateMemberArrays(staticArray, dynamicArray) {
 	// Temporarily multiple channel ids for dev
 	// const channelID = "C05A02Q37FC"; // dinutest
-	const channelID = "C05FLQKBEA0"; // alpha
+	const channelID = process.env.channelID
 
 	const membersInfo = await slackClient.conversations.members({
 		channel: channelID,
