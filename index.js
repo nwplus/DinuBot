@@ -1,7 +1,7 @@
 const { App } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
 const { getUserMatchings, createMatchings } = require("./src/matching");
-const { formatUserIds } = require("./src/utils");
+const { formatUserIds, convertTimeStamp } = require("./src/utils");
 const { getMembersInChannel, donutCheckin } = require("./src/dev_utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
@@ -201,16 +201,6 @@ slackBot.action(
 // 		text: "oK",
 // 	});
 // });
-
-const convertTimeStamp = async (unix_timestamp) => {
-	// Create a new JavaScript Date object based on the timestamp
-	// multiplied by 1000 so that the argument is in milliseconds, not seconds.
-	const date = new Date(unix_timestamp["_seconds"] * 1000);
-	// Minutes part from the timestamp
-	const day =
-		date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
-	return [day, date.getHours()];
-};
 
 // duplicate of previous algo
 const pairMembers = async (staticArray, dynamicArray) => {
