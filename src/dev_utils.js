@@ -22,4 +22,44 @@ const getMembersInChannel = async (client, channelID) => {
 	}
 };
 
-module.exports = { getMembersInChannel };
+const donutCheckin = async (channel, message, buttonAction) => {
+	try {
+		const response = await slackClient.chat.postMessage({
+			channel: channel,
+			text: message,
+			attachments: [
+				{
+					text: "Click the button below:",
+					fallback: "You are unable to interact with this button.",
+					callback_id: buttonAction,
+					actions: [
+						{
+							name: "button",
+							text: "Yes",
+							type: "button",
+							value: "didDonut",
+						},
+						{
+							name: "button",
+							text: "It's scheduled",
+							type: "button",
+							value: "scheduled",
+						},
+						{
+							name: "button",
+							text: "Not yet",
+							type: "button",
+							value: "notScheduled",
+						},
+					],
+				},
+			],
+		});
+
+		console.log("Message sent successfully:", response.ts);
+	} catch (error) {
+		console.error("Error sending message:", error);
+	}
+};
+
+module.exports = { getMembersInChannel, donutCheckin };

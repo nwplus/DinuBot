@@ -2,7 +2,7 @@ const { App } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
 const { getUserMatchings, createMatchings } = require("./src/matching");
 const { formatUserIds } = require("./src/utils");
-const { getMembersInChannel } = require("./src/dev_utils");
+const { getMembersInChannel, donutCheckin } = require("./src/dev_utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore"); // Import Firestore related functions
@@ -143,7 +143,7 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 				const checkinMessage = await slackClient.chat.scheduleMessage({
 					channel: conversation.channel.id,
 					text: "Time for a midpoint check-in! The next round of donuts go out next Monday! Did you meet yet? (buttons coming soon)",
-					post_at: Math.floor(sevenDaysFromNow.getTime() / 1000)
+					post_at: Math.floor(sevenDaysFromNow.getTime() / 1000),
 				});
 			} catch (error) {
 				console.error(error);
@@ -188,46 +188,6 @@ slackBot.action(
 	},
 );
 
-const donutCheckin = async (channel, message, buttonAction) => {
-	try {
-		const response = await slackClient.chat.postMessage({
-			channel: channel,
-			text: message,
-			attachments: [
-				{
-					text: "Click the button below:",
-					fallback: "You are unable to interact with this button.",
-					callback_id: buttonAction,
-					actions: [
-						{
-							name: "button",
-							text: "Yes",
-							type: "button",
-							value: "didDonut",
-						},
-						{
-							name: "button",
-							text: "It's scheduled",
-							type: "button",
-							value: "scheduled",
-						},
-						{
-							name: "button",
-							text: "Not yet",
-							type: "button",
-							value: "notScheduled",
-						},
-					],
-				},
-			],
-		});
-
-		console.log("Message sent successfully:", response.ts);
-	} catch (error) {
-		console.error("Error sending message:", error);
-	}
-};
-
 // slackBot.message("getFirebaseData", async ({ command, say }) => {
 // 	let documentRef = db.doc("InternalProjects/DinuBot");
 // 	console.log(documentRef);
@@ -242,22 +202,23 @@ const donutCheckin = async (channel, message, buttonAction) => {
 // 	});
 // });
 
-async function convertTimeStamp(unix_timestamp) {
+const convertTimeStamp = async (unix_timestamp) => {
 	// Create a new JavaScript Date object based on the timestamp
 	// multiplied by 1000 so that the argument is in milliseconds, not seconds.
 	const date = new Date(unix_timestamp["_seconds"] * 1000);
 	// Minutes part from the timestamp
-	const day = date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate();
+	const day =
+		date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
 	return [day, date.getHours()];
-}
+};
 
 // duplicate of previous algo
-async function pairMembers(staticArray, dynamicArray) {
+const pairMembers = async (staticArray, dynamicArray) => {
 	// console.log(staticArray)
 	// console.log(dynamicArray)
 	// Temporarily multiple channel ids for dev
 	// const channelID = "C05A02Q37FC"; // dinutest
-	const channelID = process.env.channelID
+	const channelID = process.env.channelID;
 	try {
 		const membersInfo = await slackClient.conversations.members({
 			channel: channelID,
@@ -272,9 +233,12 @@ async function pairMembers(staticArray, dynamicArray) {
 		// }
 
 		// -------------- If member is not in either static or dynamic array, add them
-		
+
 		// const matchings = getUserMatchings(memberIDs);
-		const [matchings, updatedDynamicArray] = createMatchings(staticArray, dynamicArray);
+		const [matchings, updatedDynamicArray] = createMatchings(
+			staticArray,
+			dynamicArray,
+		);
 
 		for (matching of matchings) {
 			const displayNames = [];
@@ -307,11 +271,10 @@ async function pairMembers(staticArray, dynamicArray) {
 
 // ---------------------------------------------------------- GOOD FOR ACTUAL PROD
 
-
-async function updateMemberArrays(staticArray, dynamicArray) {
+const updateMemberArrays = async (staticArray, dynamicArray) => {
 	// Temporarily multiple channel ids for dev
 	// const channelID = "C05A02Q37FC"; // dinutest
-	const channelID = process.env.channelID
+	const channelID = process.env.channelID;
 
 	const membersInfo = await slackClient.conversations.members({
 		channel: channelID,
@@ -327,13 +290,13 @@ async function updateMemberArrays(staticArray, dynamicArray) {
 
 	// checks to see if anyone has left the channel, if so, reset both arrays
 	for (const staticMember of staticArray) {
-		if (!(memberIDs.includes(staticMember))) {
+		if (!memberIDs.includes(staticMember)) {
 			staticArray = [];
 			dynamicArray = [];
 		}
 	}
 	for (const dynamicMember of dynamicArray) {
-		if (!(memberIDs.includes(dynamicMember))) {
+		if (!memberIDs.includes(dynamicMember)) {
 			staticArray = [];
 			dynamicArray = [];
 		}
@@ -344,65 +307,90 @@ async function updateMemberArrays(staticArray, dynamicArray) {
 
 	for (const memberID of shuffledMemberIDs) {
 		// if memberID is not in either arrays
-		if (!(staticArray.includes(memberID) || dynamicArray.includes(memberID))) {
+		if (
+			!(staticArray.includes(memberID) || dynamicArray.includes(memberID))
+		) {
 			// dynamicArray should > or = to staticArray
 			if (staticArray.length == dynamicArray.length) {
 				dynamicArray.push(memberID);
-			}
-			else {
+			} else {
 				staticArray.push(memberID);
 			}
 		}
 	}
 	return [staticArray, dynamicArray];
-}
+};
 
-// Determines if it's time to send out new donuts (runs on interval) 
-async function timeForDonutScheduler() {
+// Determines if it's time to send out new donuts (runs on interval)
+const timeForDonutScheduler = async () => {
 	let dinuBotData = db.doc("InternalProjects/DinuBot");
 	dinuBotData.get().then((documentSnapshot) => {
 		let statusData = documentSnapshot.data()["Status"];
-		convertTimeStamp(statusData["schedule"]["nextDonut"]["dateToPairMembers"]).then(function(nextDonutDay) {
-		const nextDonutDate = nextDonutDay[0];
-		const nextDonutHour = nextDonutDay[1];
-		// Today
-		const today = new Date();
-		const currentDate = today.getFullYear() + '-' + today.getMonth() + '-' + today.getDate();
-		const currentHour = today.getHours();
-		// Determine if we should pair members up now
-		if (currentDate == nextDonutDate && currentHour == nextDonutHour) {
-
-			// get current member arrays
-			let currentStaticArray = statusData["groupOfMembers"]["groupOfMembersStatic"];
-			let currentDynamicArray = statusData["groupOfMembers"]["groupOfMembersDynamic"];
-			updateMemberArrays(currentStaticArray, currentDynamicArray).then(function (updatedArrays) {
-				pairMembers(updatedArrays[0], updatedArrays[1]).then(function (updatedArrays) { // pair people up
-					statusData["groupOfMembers"]["groupOfMembersStatic"] = updatedArrays[0] // even if it's static, update it in case members join/leave
-					statusData["groupOfMembers"]["groupOfMembersDynamic"] = updatedArrays[1]
-					const nextDonutDate = new Date();
-					nextDonutDate.setDate(nextDonutDate.getDate() + 14);
-					statusData["schedule"]["nextDonut"]["sent"] = true; // set sent to True (is this necessary?)
-					statusData["schedule"]["nextDonut"]["dateToPairMembers"] = nextDonutDate; // set next donut date
-					statusData["schedule"]["nextDonut"]["sent"] = false; // set sent to False (is this necessary?)
-					// update data
-					dinuBotData.firestore.doc("InternalProjects/DinuBot").update({Status: statusData})
+		convertTimeStamp(
+			statusData["schedule"]["nextDonut"]["dateToPairMembers"],
+		).then(function (nextDonutDay) {
+			const nextDonutDate = nextDonutDay[0];
+			const nextDonutHour = nextDonutDay[1];
+			// Today
+			const today = new Date();
+			const currentDate =
+				today.getFullYear() +
+				"-" +
+				today.getMonth() +
+				"-" +
+				today.getDate();
+			const currentHour = today.getHours();
+			// Determine if we should pair members up now
+			if (currentDate == nextDonutDate && currentHour == nextDonutHour) {
+				// get current member arrays
+				let currentStaticArray =
+					statusData["groupOfMembers"]["groupOfMembersStatic"];
+				let currentDynamicArray =
+					statusData["groupOfMembers"]["groupOfMembersDynamic"];
+				updateMemberArrays(
+					currentStaticArray,
+					currentDynamicArray,
+				).then(function (updatedArrays) {
+					pairMembers(updatedArrays[0], updatedArrays[1]).then(
+						function (updatedArrays) {
+							// pair people up
+							statusData["groupOfMembers"][
+								"groupOfMembersStatic"
+							] = updatedArrays[0]; // even if it's static, update it in case members join/leave
+							statusData["groupOfMembers"][
+								"groupOfMembersDynamic"
+							] = updatedArrays[1];
+							const nextDonutDate = new Date();
+							nextDonutDate.setDate(nextDonutDate.getDate() + 14);
+							statusData["schedule"]["nextDonut"]["sent"] = true; // set sent to True (is this necessary?)
+							statusData["schedule"]["nextDonut"][
+								"dateToPairMembers"
+							] = nextDonutDate; // set next donut date
+							statusData["schedule"]["nextDonut"]["sent"] = false; // set sent to False (is this necessary?)
+							// update data
+							dinuBotData.firestore
+								.doc("InternalProjects/DinuBot")
+								.update({ Status: statusData });
+						},
+					);
 				});
-			});
-		}
-		else {
-			console.log("Not time for donut yet")
-		}
-	});});
-}
+			} else {
+				console.log("Not time for donut yet");
+			}
+		});
+	});
+};
 
-// runs interval to schedule donuts and update variables
-// change this to 30 later, only need to run this every 30mins, not 0.2mins
-const minutes = 30, the_interval = minutes * 60 * 1000;
-setInterval(function() {
-  // Check if donuts should be sent
-  timeForDonutScheduler()
-  // check if new members have been added (maybe a member join or leave event?)
-}, the_interval);
+// Production
+
+// // runs interval to schedule donuts and update variables
+// // change this to 30 later, only need to run this every 30mins, not 0.2mins
+// const minutes = 30, the_interval = minutes * 60 * 1000;
+// setInterval(function() {
+//   // Check if donuts should be sent
+//   timeForDonutScheduler()
+//   // check if new members have been added (maybe a member join or leave event?)
+// }, the_interval);
 
 // ------------------------------------------------------ ^^^
 
@@ -414,7 +402,7 @@ setInterval(function() {
 // let dinuBotData = db.doc("InternalProjects/DinuBot");
 // dinuBotData.get().then((documentSnapshot) => {
 // 	let statusData = documentSnapshot.data()["Status"];
-	
+
 // 	let currentStaticArray = statusData["groupOfMembers"]["groupOfMembersStatic"];
 // 	let currentDynamicArray = statusData["groupOfMembers"]["groupOfMembersDynamic"];
 // 	updateMemberArrays(currentStaticArray, currentDynamicArray).then(function (updatedArrays) {
