@@ -2,7 +2,11 @@ const { App } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
 const { getUserMatchings, createMatchings } = require("./src/matching");
 const { formatUserIds, convertTimeStamp } = require("./src/utils");
-const { getMembersInChannel, donutCheckin } = require("./src/dev_utils");
+const {
+	getMembersInChannel,
+	donutCheckin,
+	scheduleMessage,
+} = require("./src/dev_utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore"); // Import Firestore related functions
@@ -62,10 +66,15 @@ slackBot.message("createGroupChat", async ({ command, say }) => {
 
 slackBot.message("donutCheckin", async ({ command, say }) => {
 	donutCheckin(
+		slackClient,
 		"C05A02Q37FC",
 		"Time for a midpoint check-in! The next round of donuts go out on...",
 		"button_clicked",
 	);
+});
+
+slackBot.message("scheduleMessage", async ({ command, say }) => {
+	scheduleMessage(slackClient, "C05A02Q37FC");
 });
 
 // slackBot.message("createMatching", async ({ command, say }) => {
@@ -154,7 +163,7 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	}
 };
 
-// Button
+// Button actions
 
 slackBot.action(
 	{ callback_id: "button_clicked" },
@@ -179,6 +188,27 @@ slackBot.action(
 				say("You clicked 'Not yet'.");
 				// Perform the desired action for the "Not yet" button
 				// ...
+			} else {
+				say("Unknown button action.");
+			}
+		} catch (error) {
+			console.error("Error handling action:", error);
+		}
+	},
+);
+
+slackBot.action(
+	{ callback_id: "message_scheduling_button_action" },
+	async ({ ack, body, say }) => {
+		try {
+			await ack(); // Acknowledge the action request
+
+			const buttonValue = body.actions[0].value;
+
+			if (buttonValue === "cat") {
+				say("ayy cat");
+			} else if (buttonValue === "dog") {
+				say("eh");
 			} else {
 				say("Unknown button action.");
 			}

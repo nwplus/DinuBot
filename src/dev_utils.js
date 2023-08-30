@@ -22,7 +22,7 @@ const getMembersInChannel = async (client, channelID) => {
 	}
 };
 
-const donutCheckin = async (channel, message, buttonAction) => {
+const donutCheckin = async (slackClient, channel, message, buttonAction) => {
 	try {
 		const response = await slackClient.chat.postMessage({
 			channel: channel,
@@ -62,4 +62,39 @@ const donutCheckin = async (channel, message, buttonAction) => {
 	}
 };
 
-module.exports = { getMembersInChannel, donutCheckin };
+const scheduleMessage = async (slackClient, channel) => {
+	try {
+		const response = await slackClient.chat.scheduleMessage({
+			channel: channel,
+			text: "Message scheduling test",
+			post_at: Math.floor(Date.now() / 1000) + 10,
+			attachments: [
+				{
+					text: "Choose your weapon:",
+					fallback: "You are unable to interact with this button.",
+					callback_id: "message_scheduling_button_action",
+					actions: [
+						{
+							name: "button",
+							text: "cat",
+							type: "button",
+							value: "cat",
+						},
+						{
+							name: "button",
+							text: "dog",
+							type: "button",
+							value: "dog",
+						},
+					],
+				},
+			],
+		});
+
+		console.log("Message scheduled successfully:", response);
+	} catch (error) {
+		console.error("Error scheduling message:", error);
+	}
+};
+
+module.exports = { getMembersInChannel, donutCheckin, scheduleMessage };
