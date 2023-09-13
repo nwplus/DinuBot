@@ -9,6 +9,8 @@ How DinuBot pairs people together
 
 <!--- Make sure to include any additional steps like setting env variables] -->
 
+Note: If you schedule a message, the message will still be sent after you turn off the bot. This is because Slack remembers it
+
 ## Running
 
 ```

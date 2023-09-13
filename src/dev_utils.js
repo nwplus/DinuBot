@@ -62,6 +62,8 @@ const donutCheckin = async (slackClient, channel, message, buttonAction) => {
 	}
 };
 
+
+// A function to schedule messages
 const scheduleMessage = async (slackClient, channel) => {
 	try {
 		const response = await slackClient.chat.scheduleMessage({
