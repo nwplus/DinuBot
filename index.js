@@ -44,14 +44,7 @@ slackBot.command('/dinustatus', async ({ command, ack, say }) => {
 		  type: 'section',
 		  text: {
 			type: 'mrkdwn',
-			text: '*DinuBot Status*',
-		  },
-		},
-		{
-		  type: 'section',
-		  text: {
-			type: 'mrkdwn',
-			text: 'DinuBot is up and running :fire:',
+			text: '*Status update:* DinuBot is up and running :fire:',
 		  },
 		  accessory: {
 			type: 'image',
@@ -64,7 +57,7 @@ slackBot.command('/dinustatus', async ({ command, ack, say }) => {
 		  fields: [
 			{
 			  type: 'mrkdwn',
-			  text: '**Timestamp:** ' + new Date(),
+			  text: '*Timestamp:* ' + new Date(),
 			},
 		  ],
 		},
@@ -85,11 +78,11 @@ slackBot.action(
 			const buttonValue = body.actions[0].value;
 	
 			if (buttonValue === "didDonut") {
-				say("Good job!");
+				say("Good job! :saluting_face:");
 			} else if (buttonValue === "scheduled") {
-				say("Enjoy your donut!");
+				say("Enjoy your donut! :doughnut:");
 			} else {
-				say("Smh... schedule it soon!");
+				say("Schedule it soon :neutral_face: ");
 			}
 
 			// Update firebase
@@ -130,12 +123,15 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			try {
 				const sevenDaysFromNow = new Date();
 				// 7 days
-				sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+				// sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+				// 3 mins - TESTING PURPOSES
+				// sevenDaysFromNow.setTime(sevenDaysFromNow.getTime() + 3 * 60 * 1000); // Adding 3 minutes in milliseconds
 
 				// schedules message
 				const checkinMessage = await slackClient.chat.scheduleMessage({
 					channel: conversation.channel.id,
-					text: "Time for a midpoint check-in! The next round of donuts go out next Monday! Did you meet yet? (buttons coming soon)",
+					text: "Time for a midpoint check-in! The next round of donuts go out next Monday! Did you meet yet? :eyes:",
 					attachments: [
 						{
 							text: "Click the button below:",
@@ -144,19 +140,19 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 							actions: [
 								{
 									name: "button",
-									text: "Yes",
+									text: "Yes :white_check_mark:",
 									type: "button",
 									value: "didDonut",
 								},
 								{
 									name: "button",
-									text: "It's scheduled",
+									text: "It's scheduled :spiral_calendar_pad:",
 									type: "button",
 									value: "scheduled",
 								},
 								{
 									name: "button",
-									text: "Not yet",
+									text: "Not yet :x:",
 									type: "button",
 									value: "notScheduled",
 								},
@@ -218,7 +214,7 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 			createGroupChatAndSendMessage(
 				matchingString,
-				"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
+				"Hello :wave: you're on a donut ( ͡° ͜ʖ ͡°)!",
 			);
 		}
 		return [staticArray, updatedDynamicArray];
@@ -316,7 +312,7 @@ const timeForDonutScheduler = async () => {
 					
 					slackClient.chat.postMessage({
 						channel: channelID,
-						text: pairingsMetPercent + "%" + " of the groups met, let's get that to 100% this week!",
+						text: ":bar_chart: Weekly Summary: " + pairingsMetPercent + "%" + " of the groups met, let's get that to 100% this week!",
 					});
 
 					// Clear Pairings on firebase
@@ -374,7 +370,6 @@ const minutes = 30, the_interval = minutes * 60 * 1000;
 setInterval(function() {
   // Check if donuts should be sent
   timeForDonutScheduler()
-  // check if new members have been added (maybe a member join or leave event?)
 }, the_interval);
 
 // ------------------------------------------------------ ^^^
