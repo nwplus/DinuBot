@@ -37,7 +37,42 @@ slackBot.command('/dinustatus', async ({ command, ack, say }) => {
 	await ack();
   
 	// Respond with a message
-	await say(`DinuBot is running\nDate: ` + new Date());
+	// await say(`DinuBot is running\nDate: ` + new Date());
+
+	const blocks = [
+		{
+		  type: 'section',
+		  text: {
+			type: 'mrkdwn',
+			text: '*DinuBot Status*',
+		  },
+		},
+		{
+		  type: 'section',
+		  text: {
+			type: 'mrkdwn',
+			text: 'DinuBot is up and running :fire:',
+		  },
+		  accessory: {
+			type: 'image',
+			image_url: 'https://raw.githubusercontent.com/nwplus/DinuBot/dev/images/logo.png',
+			alt_text: 'DinuBot Logo',
+		  },
+		},
+		{
+		  type: 'section',
+		  fields: [
+			{
+			  type: 'mrkdwn',
+			  text: '**Timestamp:** ' + new Date(),
+			},
+		  ],
+		},
+	  ];
+
+	await say({
+		blocks: blocks,
+	});
   });
 
 slackBot.action(
