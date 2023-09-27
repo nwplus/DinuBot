@@ -1,5 +1,7 @@
+// Format user Ids by converting it into a string
 const formatUserIds = (ids) => ids.join(",");
 
+// Converts timestamp on firebase
 const convertTimeStamp = async (unix_timestamp) => {
 	// Create a new JavaScript Date object based on the timestamp
 	// multiplied by 1000 so that the argument is in milliseconds, not seconds.

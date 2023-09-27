@@ -2,19 +2,10 @@ const { App } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
 const { getUserMatchings, createMatchings } = require("./src/matching");
 const { formatUserIds, convertTimeStamp } = require("./src/utils");
-const {
-	getMembersInChannel,
-	donutCheckin,
-	scheduleMessage,
-} = require("./src/dev_utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore"); // Import Firestore related functions
 const { endAt } = require("@firebase/firestore");
-
-// const { getAnalytics } = require("firebase/analytics");
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
 require("dotenv").config();
 
@@ -40,99 +31,14 @@ const slackBot = new App({
 	appToken: botAppToken, // Token from the App-level Token that we created
 });
 
-// Commands (for dev)
-
-// slackBot.command("/test", async ({ command, event, say }) => {
-// 	try {
-// 		console.log(event);
-// 		say(`<@${event}> hello!`);
-// 	} catch (error) {
-// 		console.error("Error running test command:", error);
-// 	}
-// });
-
-slackBot.message("getMembersInChannel", async ({ channel, command, say }) => {
-	try {
-		say("Printing members in channel to console...");
-		getMembersInChannel(slackClient, channelID); // dinubot-test channel
-	} catch (error) {
-		console.error("Error getting members in channel:", error);
-	}
-});
-
-slackBot.message("createGroupChat", async ({ command, say }) => {
-	const userIds = "U03EJU7AVFD,U02HGHR0W3F"; // Donald and Yan's user ids for dev purposes
-	createGroupChatAndSendMessage(userIds, "Hello World!");
-});
-
-slackBot.message("donutCheckin", async ({ command, say }) => {
-	donutCheckin(
-		slackClient,
-		channelID,
-		"Time for a midpoint check-in! The next round of donuts go out on...",
-		"button_clicked",
-	);
-});
-
-slackBot.message("scheduleMessage", async ({ command, say }) => {
-	scheduleMessage(slackClient, channelID);
-});
-
-slackBot.message("Running", async ({ command, say }) => {
-	say("Running");
-})
-
-// slackBot.message("createMatching", async ({ command, say }) => {
-// 	// Temporarily multiple channel ids for dev
-// 	const dinubotTestChannelID = "C05A02Q37FC";
-// 	const dinubotAlphaTestChannelID = "C05FLQKBEA0";
-
-// 	const channelID = dinubotAlphaTestChannelID;
-// 	try {
-// 		const membersInfo = await slackClient.conversations.members({
-// 			channel: channelID,
-// 		});
-
-// 		memberIDs = membersInfo.members;
-
-// 		// Remove DinuBot from the list of members in a channel so no one gets paired up with it
-// 		const dinubotUserID = "U05A02QR4BU";
-// 		const botIndex = memberIDs.indexOf(dinubotUserID);
-
-// 		if (botIndex !== -1) {
-// 			memberIDs.splice(botIndex, 1);
-// 		}
-// 		const matchings = getUserMatchings(memberIDs);
-// 		console.log(matchings);
-// 		for (matching of matchings) {
-// 			const displayNames = [];
-// 			for (userId of matching) {
-// 				const userInfo = await slackClient.users.info({
-// 					user: userId,
-// 				});
-// 				const displayName = userInfo.user["profile"]["real_name"];
-// 				displayNames.push(displayName);
-// 			}
-// 			const messageText = `New donut!! ${displayNames.join(", ")}`;
-// 			console.log(channelID);
-// 			await slackClient.chat.postMessage({
-// 				channel: channelID,
-// 				text: messageText,
-// 			});
-// 			const matchingString = formatUserIds(matching);
-// 			console.log(matchingString);
-
-// 			// createGroupChatAndSendMessage(
-// 			// 	matchingString,
-// 			// 	"Hello you're on a donut ( ͡° ͜ʖ ͡°)!",
-// 			// );
-// 		}
-// 	} catch (error) {
-// 		console.error("Error creating matching:", error);
-// 	}
-// });
-
-// Functionality
+// Define a command handler for "/dinubot"
+slackBot.command('/dinustatus', async ({ command, ack, say }) => {
+	// Acknowledge the command
+	await ack();
+  
+	// Respond with a message
+	await say(`DinuBot is running\nDate: ` + new Date());
+  });
 
 slackBot.action(
 	{ callback_id: "donutCheckin" },
@@ -142,8 +48,7 @@ slackBot.action(
 
 			// Reminder: body contains info about the button, message, etc
 			const buttonValue = body.actions[0].value;
-			// console.log(body["channel"]["id"]);
-			
+	
 			if (buttonValue === "didDonut") {
 				say("Good job!");
 			} else if (buttonValue === "scheduled") {
@@ -159,7 +64,6 @@ slackBot.action(
 				for (const pairings of pairingsData["pairs"]) {
 					if (pairings["groupChatID"] == body["channel"]["id"]) {
 						pairings["status"] = buttonValue;
-						// console.log(pairingsData);
 					}
 				}
 				dinuBotData.firestore.doc("InternalProjects/DinuBot")
@@ -183,9 +87,6 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 		date.setDate(date.getDate());
 
 		if (conversation.ok) {
-
-			// SENDS MESSAGE - SEPT 12TH, UNCOMMENT AFTER WEEKLY SUMMARY FEATURE IS DONE
-
 			await slackClient.chat.postMessage({
 				channel: conversation.channel.id,
 				text: messageText,
@@ -194,13 +95,9 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			try {
 				const sevenDaysFromNow = new Date();
 				// 7 days
-				// sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+				sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
-				// 3 mins
-				sevenDaysFromNow.setTime(sevenDaysFromNow.getTime() + 3 * 60 * 1000); // Adding 3 minutes in milliseconds
-
-			// MESSAGE SCHEDULER - SEPT 12TH, UNCOMMENT AFTER WEEKLY SUMMARY FEATURE IS DONE
-
+				// schedules message
 				const checkinMessage = await slackClient.chat.scheduleMessage({
 					channel: conversation.channel.id,
 					text: "Time for a midpoint check-in! The next round of donuts go out next Monday! Did you meet yet? (buttons coming soon)",
@@ -258,97 +155,15 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	}
 };
 
-// Button actions
-slackBot.action(
-	{ callback_id: "button_clicked" },
-	async ({ ack, body, say }) => {
-		try {
-			await ack(); // Acknowledge the action request
-
-			const buttonValue = body.actions[0].value;
-			if (buttonValue === "didDonut") {
-				// Handle the "Yes" button click
-				say("You clicked 'Yes'.");
-				// Perform the desired action for the "Yes" button
-				// ...
-			} else if (buttonValue === "scheduled") {
-				// Handle the "It's scheduled" button click
-				say("You clicked 'It's scheduled'.");
-				// Perform the desired action for the "It's scheduled" button
-				// ...
-			} else if (buttonValue === "notScheduled") {
-				// Handle the "Not yet" button click
-				say("You clicked 'Not yet'.");
-				// Perform the desired action for the "Not yet" button
-				// ...
-			} else {
-				say("Unknown button action.");
-			}
-		} catch (error) {
-			console.error("Error handling action:", error);
-		}
-	},
-);
-
-// TESTING PURPOSES
-slackBot.action(
-	{ callback_id: "message_scheduling_button_action" },
-	async ({ ack, body, say }) => {
-		try {
-			await ack(); // Acknowledge the action request
-
-			const buttonValue = body.actions[0].value;
-
-			if (buttonValue === "cat") {
-				say("ayy cat");
-			} else if (buttonValue === "dog") {
-				say("eh");
-			} else {
-				say("Unknown button action.");
-			}
-		} catch (error) {
-			console.error("Error handling action:", error);
-		}
-	},
-);
-
-// slackBot.message("getFirebaseData", async ({ command, say }) => {
-// 	let documentRef = db.doc("InternalProjects/DinuBot");
-// 	console.log(documentRef);
-// 	documentRef.get().then((documentSnapshot) => {
-// 		let data = documentSnapshot.data();
-// 		console.log(`Retrieved data: ${JSON.stringify(data)}`);
-// 	});
-
-// 	await slackClient.chat.postMessage({
-// 		channel: "C05A02Q37FC",
-// 		text: "oK",
-// 	});
-// });
-
-// duplicate of previous algo
 const pairMembers = async (staticArray, dynamicArray) => {
-	// console.log(staticArray)
-	// console.log(dynamicArray)
-	// Temporarily multiple channel ids for dev
-	// const channelID = "C05A02Q37FC"; // dinutest
 	const channelID = process.env.channelID;
 	try {
 		const membersInfo = await slackClient.conversations.members({
 			channel: channelID,
 		});
 
-		// Get members in channel + Remove DinuBot from the list of members in a channel so no one gets paired up with it
-		// memberIDs = membersInfo.members;
-		// const dinubotUserID = "U05A02QR4BU";
-		// const botIndex = memberIDs.indexOf(dinubotUserID);
-		// if (botIndex !== -1) {
-		// 	memberIDs.splice(botIndex, 1);
-		// }
-
 		// -------------- If member is not in either static or dynamic array, add them
 
-		// const matchings = getUserMatchings(memberIDs);
 		const [matchings, updatedDynamicArray] = createMatchings(
 			staticArray,
 			dynamicArray,
@@ -363,14 +178,8 @@ const pairMembers = async (staticArray, dynamicArray) => {
 				const displayName = userInfo.user["profile"]["real_name"];
 				displayNames.push(displayName);
 			}
-			// const messageText = `New donut!! ${displayNames.join(", ")}`;
-			// // console.log(channelID);
-			// await slackClient.chat.postMessage({
-			// 	channel: channelID,
-			// 	text: messageText,
-			// });
+	
 			const matchingString = formatUserIds(matching);
-			// console.log(matchingString);
 
 			createGroupChatAndSendMessage(
 				matchingString,
@@ -387,7 +196,6 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 const updateMemberArrays = async (staticArray, dynamicArray) => {
 	// Temporarily multiple channel ids for dev
-	// const channelID = "C05A02Q37FC"; // dinutest
 	const channelID = process.env.channelID;
 
 	const membersInfo = await slackClient.conversations.members({
@@ -525,18 +333,18 @@ const timeForDonutScheduler = async () => {
 
 // Production
 
-// // runs interval to schedule donuts and update variables
-// // change this to 30 later, only need to run this every 30mins, not 0.2mins
-// const minutes = 30, the_interval = minutes * 60 * 1000;
-// setInterval(function() {
-//   // Check if donuts should be sent
-//   timeForDonutScheduler()
-//   // check if new members have been added (maybe a member join or leave event?)
-// }, the_interval);
+// runs interval to schedule donuts and update variables
+// change this to 30 later, only need to run this every 30mins, not 0.2mins
+const minutes = 30, the_interval = minutes * 60 * 1000;
+setInterval(function() {
+  // Check if donuts should be sent
+  timeForDonutScheduler()
+  // check if new members have been added (maybe a member join or leave event?)
+}, the_interval);
 
 // ------------------------------------------------------ ^^^
 
 // for testing purposes
-timeForDonutScheduler()
+// timeForDonutScheduler()
 
 slackBot.start(3000);
