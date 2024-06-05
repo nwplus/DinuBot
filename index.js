@@ -32,77 +32,75 @@ const slackBot = new App({
 });
 
 // Define a command handler for "/dinubot"
-slackBot.command('/dinustatus', async ({ command, ack, say }) => {
+slackBot.command("/dinustatus", async ({ command, ack, say }) => {
 	// Acknowledge the command
 	await ack();
-  
+
 	// Respond with a message
 	// await say(`DinuBot is running\nDate: ` + new Date());
 
 	const blocks = [
 		{
-		  type: 'section',
-		  text: {
-			type: 'mrkdwn',
-			text: '*Status update:* DinuBot is up and running :fire:',
-		  },
-		  accessory: {
-			type: 'image',
-			image_url: 'https://raw.githubusercontent.com/nwplus/DinuBot/dev/images/logo.png',
-			alt_text: 'DinuBot Logo',
-		  },
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*Status update:* DinuBot is up and running :fire:",
+			},
+			accessory: {
+				type: "image",
+				image_url:
+					"https://raw.githubusercontent.com/nwplus/DinuBot/dev/images/logo.png",
+				alt_text: "DinuBot Logo",
+			},
 		},
 		{
-		  type: 'section',
-		  fields: [
-			{
-			  type: 'mrkdwn',
-			  text: '*Timestamp:* ' + new Date(),
-			},
-		  ],
+			type: "section",
+			fields: [
+				{
+					type: "mrkdwn",
+					text: "*Timestamp:* " + new Date(),
+				},
+			],
 		},
-	  ];
+	];
 
 	await say({
 		blocks: blocks,
 	});
-  });
+});
 
-slackBot.action(
-	{ callback_id: "donutCheckin" },
-	async ({ ack, body, say }) => {
-		try {
-			await ack(); // Acknowledge the action request
+slackBot.action({ callback_id: "donutCheckin" }, async ({ ack, body, say }) => {
+	try {
+		await ack(); // Acknowledge the action request
 
-			// Reminder: body contains info about the button, message, etc
-			const buttonValue = body.actions[0].value;
-	
-			if (buttonValue === "didDonut") {
-				say("Good job! :saluting_face:");
-			} else if (buttonValue === "scheduled") {
-				say("Enjoy your donut! :doughnut:");
-			} else {
-				say("Schedule it soon :neutral_face: ");
-			}
+		// Reminder: body contains info about the button, message, etc
+		const buttonValue = body.actions[0].value;
 
-			// Update firebase
-			let dinuBotData = db.doc("InternalProjects/DinuBot");
-			dinuBotData.get().then((documentSnapshot) => {
-				let pairingsData = documentSnapshot.data()["Pairs"];
-				for (const pairings of pairingsData["pairs"]) {
-					if (pairings["groupChatID"] == body["channel"]["id"]) {
-						pairings["status"] = buttonValue;
-					}
-				}
-				dinuBotData.firestore.doc("InternalProjects/DinuBot")
-				.update({ Pairs: pairingsData})
-			})
-
-		} catch (error) {
-			console.error("Error handling action:", error);
+		if (buttonValue === "didDonut") {
+			say("Good job! :saluting_face:");
+		} else if (buttonValue === "scheduled") {
+			say("Enjoy your donut! :doughnut:");
+		} else {
+			say("Schedule it soon :neutral_face: ");
 		}
-	},
-);
+
+		// Update firebase
+		let dinuBotData = db.doc("InternalProjects/DinuBot");
+		dinuBotData.get().then((documentSnapshot) => {
+			let pairingsData = documentSnapshot.data()["Pairs"];
+			for (const pairings of pairingsData["pairs"]) {
+				if (pairings["groupChatID"] == body["channel"]["id"]) {
+					pairings["status"] = buttonValue;
+				}
+			}
+			dinuBotData.firestore
+				.doc("InternalProjects/DinuBot")
+				.update({ Pairs: pairingsData });
+		});
+	} catch (error) {
+		console.error("Error handling action:", error);
+	}
+});
 
 const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	try {
@@ -135,7 +133,8 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 					attachments: [
 						{
 							text: "Click the button below:",
-							fallback: "You are unable to interact with this button.",
+							fallback:
+								"You are unable to interact with this button.",
 							callback_id: "donutCheckin",
 							actions: [
 								{
@@ -161,7 +160,6 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 					],
 					post_at: Math.floor(sevenDaysFromNow.getTime() / 1000),
 				});
-
 			} catch (error) {
 				console.error(error);
 			}
@@ -170,16 +168,17 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			let dinuBotData = db.doc("InternalProjects/DinuBot");
 			dinuBotData.get().then((documentSnapshot) => {
 				let pairingsData = documentSnapshot.data()["Pairs"];
-			
-				pairingsData["pairs"].push({
-					"groupChatID": conversation.channel.id,
-					"members": userIds.split(","),
-					"status": "Not yet"
-				})
 
-				dinuBotData.firestore.doc("InternalProjects/DinuBot")
-				.update({ Pairs: pairingsData})
-			})
+				pairingsData["pairs"].push({
+					groupChatID: conversation.channel.id,
+					members: userIds.split(","),
+					status: "Not yet",
+				});
+
+				dinuBotData.firestore
+					.doc("InternalProjects/DinuBot")
+					.update({ Pairs: pairingsData });
+			});
 		}
 	} catch (error) {
 		console.error("Error creating group chat and sending message:", error);
@@ -209,7 +208,7 @@ const pairMembers = async (staticArray, dynamicArray) => {
 				const displayName = userInfo.user["profile"]["real_name"];
 				displayNames.push(displayName);
 			}
-	
+
 			const matchingString = formatUserIds(matching);
 
 			createGroupChatAndSendMessage(
@@ -221,6 +220,87 @@ const pairMembers = async (staticArray, dynamicArray) => {
 	} catch (error) {
 		console.error("Error creating matching:", error);
 	}
+};
+
+// TODO
+const removeOptOutMembers = async (staticArray, dynamicArray) => {
+	const channelID = process.env.channelID;
+
+	const membersInfo = await slackClient.conversations.members({
+		channel: channelID,
+	});
+
+	// Get members in channel + Remove DinuBot from the list of members in a channel so no one gets paired up with it
+	memberIDs = membersInfo.members;
+
+	// Populate members in firebase
+	let dinuBotData = db.doc("InternalProjects/DinuBot");
+	dinuBotData.get().then((documentSnapshot) => {
+		let membersData = documentSnapshot.data()["Members"];
+
+		for (let i = 0; i < memberIDs.length; i++) {
+			membersData["members"].push({
+				dontPair: [],
+				id: memberIDs[i],
+				optIn: true,
+			});
+		}
+
+		dinuBotData.firestore
+			.doc("InternalProjects/DinuBot")
+			.update({ Members: membersData });
+	});
+
+	// Grab data from firebase, storing the memberIDs of people who opted out
+	const optOut = []; // array of strings (memberIDs)
+	dinuBotData.get().then((documentSnapshot) => {
+		let membersData = documentSnapshot.data()["Members"];
+		// membersData = [{
+		// 	dontPair : [],
+		// 	id : "",
+		// 	optIn: true,
+		// }]
+
+		for (const member of membersData) {
+			if (!member.optIn) {
+				optOut.push(member.id);
+			}
+		}
+	});
+
+	// remove opted out members from dynamic and static arrays
+
+	for (const member of dynamicArray) {
+		if (member in optOut) {
+			var index = dynamicArray.indexOf(member);
+			dynamicArray.splice(index, 1);
+		}
+	}
+
+	for (const member of staticArray) {
+		if (member in optOut) {
+			var index = staticArray.indexOf(member);
+			staticArray.splice(index, 1);
+		}
+	}
+
+	// rebalance static and dynamic arrays
+	while (true) {
+		const lengthDifference = dynamicArray.length - staticArray.length;
+		// Check if the length difference is either even or 1 with dynamicArray being longer
+		if (lengthDifference === 0 || lengthDifference === 1) {
+			break;
+		}
+
+		// Balance the arrays
+		if (dynamicArray.length > staticArray.length) {
+			staticArray.push(dynamicArray.pop());
+		} else {
+			dynamicArray.push(staticArray.pop());
+		}
+	}
+
+	return [staticArray, dynamicArray];
 };
 
 // ---------------------------------------------------------- GOOD FOR ACTUAL PROD
@@ -295,39 +375,46 @@ const timeForDonutScheduler = async () => {
 			const currentHour = today.getHours();
 			// Determine if we should pair members up now
 			if (currentDate == nextDonutDate && currentHour == nextDonutHour) {
-
 				// Send weekly summary message
 				let dinuBotData = db.doc("InternalProjects/DinuBot");
 				dinuBotData.get().then((documentSnapshot) => {
 					let pairingsMet = 0;
-					
+
 					let pairingsData = documentSnapshot.data()["Pairs"];
 					for (const pairings of pairingsData["pairs"]) {
 						if (pairings["status"] == "didDonut") {
 							pairingsMet += 1;
 						}
 					}
-				
-					let pairingsMetPercent = ((pairingsMet/pairingsData["pairs"].length) * 100).toFixed(0);
-					
+
+					let pairingsMetPercent = (
+						(pairingsMet / pairingsData["pairs"].length) *
+						100
+					).toFixed(0);
+
 					slackClient.chat.postMessage({
 						channel: channelID,
-						text: ":bar_chart: Weekly Summary: " + pairingsMetPercent + "%" + " of the groups met, let's get that to 100% this week!",
+						text:
+							":bar_chart: Weekly Summary: " +
+							pairingsMetPercent +
+							"%" +
+							" of the groups met, let's get that to 100% this week!",
 					});
 
 					// Clear Pairings on firebase
-					pairingsData["pairs"] = []
-					dinuBotData.firestore.doc("InternalProjects/DinuBot")
-					.update({ Pairs: pairingsData})
-				})
-
-			
+					pairingsData["pairs"] = [];
+					dinuBotData.firestore
+						.doc("InternalProjects/DinuBot")
+						.update({ Pairs: pairingsData });
+				});
 
 				// get current member arrays
 				let currentStaticArray =
 					statusData["groupOfMembers"]["groupOfMembersStatic"];
 				let currentDynamicArray =
 					statusData["groupOfMembers"]["groupOfMembersDynamic"];
+				// helper function to remove members who are opted out
+				removeOptOutMembers(currentStaticArray, currentDynamicArray);
 				updateMemberArrays(
 					currentStaticArray,
 					currentDynamicArray,
@@ -366,15 +453,21 @@ const timeForDonutScheduler = async () => {
 
 // runs interval to schedule donuts and update variables
 // change this to 30 later, only need to run this every 30mins, not 0.2mins
-const minutes = 30, the_interval = minutes * 60 * 1000;
-setInterval(function() {
-  // Check if donuts should be sent
-  timeForDonutScheduler()
+const minutes = 30,
+	the_interval = minutes * 60 * 1000;
+setInterval(function () {
+	// Check if donuts should be sent
+	timeForDonutScheduler();
 }, the_interval);
 
 // ------------------------------------------------------ ^^^
 
 // for testing purposes
 // timeForDonutScheduler()
+
+// testing purposes for ticket 1
+// test1 = [];
+// test2 = [];
+// removeOptOutMembers(test1, test2);
 
 slackBot.start(3000);
