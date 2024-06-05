@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  app:
+    image: dinubot
+    build: .
+    environment:
+      from: .env

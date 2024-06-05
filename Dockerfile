@@ -1,10 +1,14 @@
-FROM node:14-alpine
+FROM node:18-alpine
+
+USER node
 
 WORKDIR /app
 
-COPY . /app
+COPY package*.json ./
 
 RUN yarn install
+
+COPY . .
 
 ENV NAME dinubot
 
