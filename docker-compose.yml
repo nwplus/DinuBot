@@ -1,8 +1,9 @@
-version: '3.8'
-
 services:
-  app:
+  dinubot:
     image: dinubot
     build: .
-    environment:
-      from: .env
+    env_file:
+      - .env
+    volumes:
+      - ./service_account.json:/app/service_account.json:ro
+      - ./.env:/app/.env:ro
