@@ -194,9 +194,27 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 		// -------------- If member is not in either static or dynamic array, add them
 
+		// grab dontPairData from Firebase
+		const dontPairData = {};
+		let dinuBotData = db.doc("InternalProjects/DinuBot");
+
+		dinuBotData.get().then((documentSnapshot) => {
+    		let membersData = documentSnapshot.data()["Members"];
+    		// membersData = [{
+    		//  dontPair : [],
+    		//  id : "",
+    		//  optIn: true,
+    		// }]
+
+    		for (const member of membersData) {
+        		dontPairData[member.id] = member.dontPair;
+   			}
+		});
+
 		const [matchings, updatedDynamicArray] = createMatchings(
 			staticArray,
 			dynamicArray,
+			dontPairData,
 		);
 
 		for (matching of matchings) {

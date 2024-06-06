@@ -10,8 +10,10 @@ const updateDynamicArray = (dynamicArray) => {
 	return dynamicArray;
 }
 
-const createMatchings = (staticArray, dynamicArray) => {
+const createMatchings = (staticArray, dynamicArray, dontPairData) => {
 	const matchings = [];
+	// dontPairData is a hashmap {key: ID, value: [dontPairID1, dontPairID2]}
+	// check if dontPairData[staticArray[i] is in]
 	// assumes dynamic array length is = staticArray or 1 longer
 	// Match users based on their array position (note: staticArray will never > dynamicArray)
 	for (let i=0; i < staticArray.length; i++) {
