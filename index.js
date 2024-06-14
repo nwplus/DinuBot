@@ -199,16 +199,16 @@ const pairMembers = async (staticArray, dynamicArray) => {
 		let dinuBotData = db.doc("InternalProjects/DinuBot");
 
 		dinuBotData.get().then((documentSnapshot) => {
-    		let membersData = documentSnapshot.data()["Members"];
-    		// membersData = [{
-    		//  dontPair : [],
-    		//  id : "",
-    		//  optIn: true,
-    		// }]
+			let membersData = documentSnapshot.data()["Members"];
+			// membersData = [{
+			//  dontPair : [],
+			//  id : "",
+			//  optIn: true,
+			// }]
 
-    		for (const member of membersData) {
-        		dontPairData[member.id] = member.dontPair;
-   			}
+			for (const member of membersData) {
+				dontPairData[member.id] = member.dontPair;
+			}
 		});
 
 		const [matchings, updatedDynamicArray] = createMatchings(
@@ -244,73 +244,51 @@ const pairMembers = async (staticArray, dynamicArray) => {
 const removeOptOutMembers = async (staticArray, dynamicArray) => {
 	const channelID = process.env.channelID;
 
+	// Fetch members from Slack
 	const membersInfo = await slackClient.conversations.members({
 		channel: channelID,
 	});
 
-	// Get members in channel + Remove DinuBot from the list of members in a channel so no one gets paired up with it
-	memberIDs = membersInfo.members;
+	// Get members in channel and remove DinuBot (assuming DinuBot ID is known and stored in process.env.DinuBotID)
+	const dinuBotID = process.env.DinuBotID;
+	let memberIDs = membersInfo.members.filter(
+		(memberID) => memberID !== dinuBotID,
+	);
 
-	// Populate members in firebase
+	// Populate members in Firebase
 	let dinuBotData = db.doc("InternalProjects/DinuBot");
-	dinuBotData.get().then((documentSnapshot) => {
-		let membersData = documentSnapshot.data()["Members"];
+	let documentSnapshot = await dinuBotData.get();
+	let membersData = documentSnapshot.data()["Members"] || { members: [] };
 
-		for (let i = 0; i < memberIDs.length; i++) {
-			membersData["members"].push({
-				dontPair: [],
-				id: memberIDs[i],
-				optIn: true,
-			});
-		}
-
-		dinuBotData.firestore
-			.doc("InternalProjects/DinuBot")
-			.update({ Members: membersData });
+	memberIDs.forEach((memberID) => {
+		membersData.members.push({
+			dontPair: [],
+			id: memberID,
+			optIn: true,
+		});
 	});
 
-	// Grab data from firebase, storing the memberIDs of people who opted out
-	const optOut = []; // array of strings (memberIDs)
-	dinuBotData.get().then((documentSnapshot) => {
-		let membersData = documentSnapshot.data()["Members"];
-		// membersData = [{
-		// 	dontPair : [],
-		// 	id : "",
-		// 	optIn: true,
-		// }]
+	await dinuBotData.update({ Members: membersData });
 
-		for (const member of membersData) {
-			if (!member.optIn) {
-				optOut.push(member.id);
-			}
-		}
-	});
+	// Grab data from Firebase to get members who opted out
+	documentSnapshot = await dinuBotData.get();
+	membersData = documentSnapshot.data()["Members"].members;
 
-	// remove opted out members from dynamic and static arrays
+	const optOut = membersData
+		.filter((member) => !member.optIn)
+		.map((member) => member.id);
 
-	for (const member of dynamicArray) {
-		if (member in optOut) {
-			var index = dynamicArray.indexOf(member);
-			dynamicArray.splice(index, 1);
-		}
-	}
+	// Remove opted-out members from dynamic and static arrays
+	dynamicArray = dynamicArray.filter((member) => !optOut.includes(member));
+	staticArray = staticArray.filter((member) => !optOut.includes(member));
 
-	for (const member of staticArray) {
-		if (member in optOut) {
-			var index = staticArray.indexOf(member);
-			staticArray.splice(index, 1);
-		}
-	}
-
-	// rebalance static and dynamic arrays
+	// Rebalance static and dynamic arrays
 	while (true) {
 		const lengthDifference = dynamicArray.length - staticArray.length;
-		// Check if the length difference is either even or 1 with dynamicArray being longer
 		if (lengthDifference === 0 || lengthDifference === 1) {
 			break;
 		}
 
-		// Balance the arrays
 		if (dynamicArray.length > staticArray.length) {
 			staticArray.push(dynamicArray.pop());
 		} else {
@@ -318,57 +296,6 @@ const removeOptOutMembers = async (staticArray, dynamicArray) => {
 		}
 	}
 
-	return [staticArray, dynamicArray];
-};
-
-// ---------------------------------------------------------- GOOD FOR ACTUAL PROD
-
-const updateMemberArrays = async (staticArray, dynamicArray) => {
-	// Temporarily multiple channel ids for dev
-	const channelID = process.env.channelID;
-
-	const membersInfo = await slackClient.conversations.members({
-		channel: channelID,
-	});
-
-	// Get members in channel + Remove DinuBot from the list of members in a channel so no one gets paired up with it
-	memberIDs = membersInfo.members;
-	const dinubotUserID = "U05A02QR4BU";
-	const botIndex = memberIDs.indexOf(dinubotUserID);
-	if (botIndex !== -1) {
-		memberIDs.splice(botIndex, 1);
-	}
-
-	// checks to see if anyone has left the channel, if so, reset both arrays
-	for (const staticMember of staticArray) {
-		if (!memberIDs.includes(staticMember)) {
-			staticArray = [];
-			dynamicArray = [];
-		}
-	}
-	for (const dynamicMember of dynamicArray) {
-		if (!memberIDs.includes(dynamicMember)) {
-			staticArray = [];
-			dynamicArray = [];
-		}
-	}
-
-	// shuffle memberIDs (incase members in channel changes)
-	const shuffledMemberIDs = memberIDs.sort((a, b) => 0.5 - Math.random());
-
-	for (const memberID of shuffledMemberIDs) {
-		// if memberID is not in either arrays
-		if (
-			!(staticArray.includes(memberID) || dynamicArray.includes(memberID))
-		) {
-			// dynamicArray should > or = to staticArray
-			if (staticArray.length == dynamicArray.length) {
-				dynamicArray.push(memberID);
-			} else {
-				staticArray.push(memberID);
-			}
-		}
-	}
 	return [staticArray, dynamicArray];
 };
 
@@ -484,8 +411,8 @@ setInterval(function () {
 // timeForDonutScheduler()
 
 // testing purposes for ticket 1
-// test1 = [];
-// test2 = [];
-// removeOptOutMembers(test1, test2);
+test1 = [];
+test2 = [];
+removeOptOutMembers(test1, test2);
 
 slackBot.start(3000);
