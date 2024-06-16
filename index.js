@@ -244,7 +244,8 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 	let membersData = documentSnapshot.data()["Members"] || { members: [] };
 
 	// TO DO -> figure out how to keep attributes updated and correctly update members firebase when new user is added or removed from channel
-	if (membersData.members.length() == 0) {
+	// Initialize members in Firebase if empty
+	if (membersData.members.length === 0) {
 		memberIDs.forEach((memberID) => {
 			membersData.members.push({
 				dontPair: [],
@@ -253,17 +254,21 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 			});
 		});
 	} else {
+		// Add new members
 		memberIDs.forEach((memberID) => {
-			membersData.members.push({
-				id: memberID,
-			});
+			if (!membersData.members.some((member) => member.id === memberID)) {
+				membersData.members.push({
+					dontPair: [],
+					id: memberID,
+					optIn: true,
+				});
+			}
 		});
-		for (i = 0; i < membersIDs.length() - 1; i++) {
-			membersData.members.push({
-				dontPair: membersData.members[i].dontPair,
-				optIn: membersData.members[i].optIn,
-			});
-		}
+
+		// Remove members who left
+		membersData.members = membersData.members.filter((member) =>
+			memberIDs.includes(member.id),
+		);
 	}
 
 	await dinuBotData.update({ Members: membersData });
