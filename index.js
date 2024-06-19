@@ -194,10 +194,26 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 		// -------------- If member is not in either static or dynamic array, add them
 
-		const [matchings, updatedDynamicArray] = createMatchings(
-			staticArray,
-			dynamicArray,
-		);
+		const members = membersInfo.members;
+
+		let matched = false;
+		let matchings;
+		let updatedDynamicArray;
+
+		while (!matched) {
+			[matchings, updatedDynamicArray] = createMatchings(
+				staticArray,
+				dynamicArray,
+			);
+
+			matched = matchings.every((pair) => {
+				const [userA, userB] = pair;
+				return (
+					!members[userA]?.blockList?.includes(userB) &&
+					!members[userB]?.blockList?.includes(userA)
+				);
+			});
+		}
 
 		for (matching of matchings) {
 			const displayNames = [];
@@ -440,7 +456,7 @@ setInterval(function () {
 // ------------------------------------------------------ ^^^
 
 // for testing purposes
-// timeForDonutScheduler();
+timeForDonutScheduler();
 
 // testing purposes for ticket 1
 test1 = [];
