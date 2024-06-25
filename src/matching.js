@@ -10,7 +10,7 @@ const updateDynamicArray = (dynamicArray) => {
 	return dynamicArray;
 };
 
-const createMatchings = (staticArray, dynamicArray, dontPairData) => {
+const createMatchings = (staticArray, dynamicArray) => {
 	const matchings = [];
 	// assumes dynamic array length is = staticArray or 1 longer
 	// Match users based on their array position (note: staticArray will never > dynamicArray)

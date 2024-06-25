@@ -1,11 +1,10 @@
 const { App } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
-const { getUserMatchings, createMatchings } = require("./src/matching");
+const { createMatchings } = require("./src/matching");
 const { formatUserIds, convertTimeStamp } = require("./src/utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore"); // Import Firestore related functions
-const { endAt } = require("@firebase/firestore");
 
 require("dotenv").config();
 
@@ -29,6 +28,395 @@ const slackBot = new App({
 	signingSecret: botSigningSecret, // Find in Basic Information Tab
 	socketMode: true,
 	appToken: botAppToken, // Token from the App-level Token that we created
+});
+
+// Home tab event listener
+slackBot.event("app_home_opened", async ({ event, client, logger }) => {
+	try {
+		// Fetch user data from Firebase
+		const dinuBotData = db.doc("InternalProjects/DinuBot");
+		const documentSnapshot = await dinuBotData.get();
+		const membersData = documentSnapshot.data()["Members"];
+		let optInStatus = null;
+
+		// Looks for the user who pressed home to fetch their user preferences
+		membersData.members.forEach((member) => {
+			if (member.id === event.user) {
+				// Assuming event.user contains the user ID
+				optInStatus = member.optIn;
+			}
+		});
+
+		// Determine button text based on optInStatus
+		const buttonText = optInStatus
+			? ":red_circle: Opt-out"
+			: ":large_green_circle: Opt-in";
+
+		// Publish updated view to Slack
+		await client.views.publish({
+			user_id: event.user,
+			view: {
+				type: "home",
+				blocks: [
+					{
+						type: "header",
+						text: {
+							type: "plain_text",
+							text: ":gear: Settings",
+							emoji: true,
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: "Set your preferences with Dinubot. Opt-out out of the next rotation until you manually opt-in again.",
+							emoji: true,
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: buttonText,
+									emoji: true,
+								},
+								value: event.user,
+								action_id: "opt_out",
+							},
+						],
+					},
+					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: "You can set your preference to prevent being matched with someone—maximum 2 users at a time.",
+							emoji: true,
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: "Don't pair me with...",
+						},
+						accessory: {
+							type: "users_select",
+							placeholder: {
+								type: "plain_text",
+								text: "Select a user",
+								emoji: true,
+							},
+							action_id: "users_select_1",
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: "Don't pair me with...",
+						},
+						accessory: {
+							type: "users_select",
+							placeholder: {
+								type: "plain_text",
+								text: "Select a user",
+								emoji: true,
+							},
+							action_id: "users_select_2",
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: "Save",
+									emoji: true,
+								},
+								action_id: "save_preferences",
+							},
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: "Reset",
+									emoji: true,
+								},
+								action_id: "reset_preferences",
+							},
+						],
+					},
+				],
+			},
+		});
+	} catch (error) {
+		logger.error("Error publishing view:", error);
+	}
+});
+
+// Opt-out button action handler
+slackBot.action("opt_out", async ({ body, ack, client }) => {
+	await ack();
+
+	const userId = body.user.id;
+
+	// Update Firebase to set the opt-out status for the user
+	try {
+		let dinuBotData = db.doc("InternalProjects/DinuBot");
+		let documentSnapshot = await dinuBotData.get();
+		let membersData = documentSnapshot.data()["Members"];
+
+		// Find the member and update the opt-out status
+		let updatedOptInStatus;
+		membersData.members = membersData.members.map((member) => {
+			if (member.id === userId) {
+				member.optIn = !member.optIn;
+				updatedOptInStatus = member.optIn;
+			}
+			return member;
+		});
+
+		// Update Firestore with the new members data
+		await dinuBotData.update({ Members: membersData });
+
+		const successMessage = updatedOptInStatus
+			? "You have successfully opted in! :white_check_mark:"
+			: "You have successfully opted out! :white_check_mark:";
+
+		// Refresh the Home tab view
+		await client.views.publish({
+			user_id: userId,
+			view: {
+				type: "home",
+				callback_id: "home_view",
+				blocks: [
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: successMessage,
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: "Back Home",
+									emoji: true,
+								},
+								action_id: "back_home",
+							},
+						],
+					},
+				],
+			},
+		});
+	} catch (error) {
+		console.error("Error updating Firebase:", error);
+	}
+});
+
+// Back home button action handler
+slackBot.action("back_home", async ({ body, ack, client }) => {
+	await ack();
+	const userId = body.user.id;
+
+	try {
+		// Fetch user data from Firebase
+		const dinuBotData = db.doc("InternalProjects/DinuBot");
+		const documentSnapshot = await dinuBotData.get();
+		const membersData = documentSnapshot.data()["Members"];
+		let optInStatus = null;
+
+		// Looks for the user who pressed home to fetch their user preferences
+		membersData.members.forEach((member) => {
+			if (member.id === userId) {
+				// Assuming userId contains the user ID
+				optInStatus = member.optIn;
+			}
+		});
+
+		// Determine button text based on optInStatus
+		const buttonText = optInStatus
+			? ":red_circle: Opt-out"
+			: ":large_green_circle: Opt-in";
+
+		// Publish updated view to Slack
+		await client.views.publish({
+			user_id: userId,
+			view: {
+				type: "home",
+				blocks: [
+					{
+						type: "header",
+						text: {
+							type: "plain_text",
+							text: ":gear: Settings",
+							emoji: true,
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: "Set your preferences with Dinubot. Opt-out out of the next rotation until you manually opt-in again.",
+							emoji: true,
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: buttonText,
+									emoji: true,
+								},
+								value: userId,
+								action_id: "opt_out",
+							},
+						],
+					},
+					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: "You can set your preference to prevent being matched with someone—maximum 2 users at a time.",
+							emoji: true,
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: "Don't pair me with...",
+						},
+						accessory: {
+							type: "users_select",
+							placeholder: {
+								type: "plain_text",
+								text: "Select a user",
+								emoji: true,
+							},
+							action_id: "users_select_1",
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: "Don't pair me with...",
+						},
+						accessory: {
+							type: "users_select",
+							placeholder: {
+								type: "plain_text",
+								text: "Select a user",
+								emoji: true,
+							},
+							action_id: "users_select_2",
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: "Save",
+									emoji: true,
+								},
+								action_id: "save_preferences",
+							},
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: "Reset",
+									emoji: true,
+								},
+								action_id: "reset_preferences",
+							},
+						],
+					},
+				],
+			},
+		});
+	} catch (error) {
+		console.error("Error publishing view:", error);
+	}
+});
+
+// Reset button action handler
+
+slackBot.action("reset_preferences", async ({ body, ack, client }) => {
+	await ack();
+
+	const userId = body.user.id;
+
+	// Update Firebase to set the opt-out status for the user
+	try {
+		let dinuBotData = db.doc("InternalProjects/DinuBot");
+		let documentSnapshot = await dinuBotData.get();
+		let membersData = documentSnapshot.data()["Members"];
+
+		// Find the member and update the opt-out status
+		let updatedOptInStatus;
+		membersData.members = membersData.members.map((member) => {
+			if (member.id === userId) {
+				member.dontPair = [];
+			}
+			return member;
+		});
+
+		// Update Firestore with the new members data
+		await dinuBotData.update({ Members: membersData });
+
+		// Refresh the Home tab view
+		await client.views.publish({
+			user_id: userId,
+			view: {
+				type: "home",
+				callback_id: "home_view",
+				blocks: [
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: "You have successfully reset your Dont Pair list! It is now empty :white_check_mark:",
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: "Back Home",
+									emoji: true,
+								},
+								action_id: "back_home",
+							},
+						],
+					},
+				],
+			},
+		});
+	} catch (error) {
+		console.error("Error updating Firebase:", error);
+	}
 });
 
 // Define a command handler for "/dinubot"
@@ -194,24 +582,38 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 		// -------------- If member is not in either static or dynamic array, add them
 
-		const members = membersInfo.members;
+		let dinuBotData = db.doc("InternalProjects/DinuBot");
+		let documentSnapshot = await dinuBotData.get();
+		let membersData = documentSnapshot.data()["Members"] || { members: [] };
 
 		let matched = false;
-		let matchings;
-		let updatedDynamicArray;
 
+		// TO DO: Implement cycle update feature (update both arrays once the dynamic array has gone through a full cycle)
+		// TO DO: Implement a hard stop for the while loop (maybe after 500 attempts)
 		while (!matched) {
 			[matchings, updatedDynamicArray] = createMatchings(
 				staticArray,
 				dynamicArray,
 			);
 
-			matched = matchings.every((pair) => {
-				const [userA, userB] = pair;
-				return (
-					!members[userA]?.blockList?.includes(userB) &&
-					!members[userB]?.blockList?.includes(userA)
-				);
+			console.log(matchings);
+
+			matched = matchings.every((group) => {
+				return group.every((userA, _, arr) => {
+					return arr.every((userB) => {
+						if (userA === userB) return true;
+						const memberA = membersData.members.find(
+							(member) => member.id === userA,
+						);
+						const memberB = membersData.members.find(
+							(member) => member.id === userB,
+						);
+						return (
+							!memberA.dontPair.includes(userB) &&
+							!memberB.dontPair.includes(userA)
+						);
+					});
+				});
 			});
 		}
 
@@ -259,7 +661,6 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 	let documentSnapshot = await dinuBotData.get();
 	let membersData = documentSnapshot.data()["Members"] || { members: [] };
 
-	// TO DO -> figure out how to keep attributes updated and correctly update members firebase when new user is added or removed from channel
 	// Initialize members in Firebase if empty
 	if (membersData.members.length === 0) {
 		memberIDs.forEach((memberID) => {
@@ -463,4 +864,7 @@ test1 = [];
 test2 = [];
 // updateMemberArrays(test1, test2);
 
-slackBot.start(3000);
+(async () => {
+	await slackBot.start(3000);
+	console.log("Slack bot is running!");
+})();
