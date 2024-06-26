@@ -392,6 +392,16 @@ slackBot.action("save_preferences", async ({ body, ack, client }) => {
 		let membersData = documentSnapshot.data()["Members"];
 		let user = membersData.members.find((member) => member.id === userId);
 
+		let selectedUsers = [];
+		if (userSelections[userId]) {
+			if (userSelections[userId].dontPair[0]) {
+				selectedUsers.push(userSelections[userId].dontPair[0]);
+			}
+			if (userSelections[userId].dontPair[1]) {
+				selectedUsers.push(userSelections[userId].dontPair[1]);
+			}
+		}
+
 		if (user.dontPair.length >= 2) {
 			// User already has 2 blocked users
 			await client.views.publish({
