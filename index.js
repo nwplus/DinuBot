@@ -989,7 +989,4 @@ test1 = [];
 test2 = [];
 // updateMemberArrays(test1, test2);
 
-(async () => {
-	await slackBot.start(3000);
-	console.log("Slack bot is running!");
-})();
+slackBot.start(3000);
