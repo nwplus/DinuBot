@@ -5,6 +5,7 @@ const { formatUserIds, convertTimeStamp } = require("./src/utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore"); // Import Firestore related functions
+const bcrypt = require('bcrypt'); // import bcrypt library for encryption
 
 require("dotenv").config();
 
@@ -449,125 +450,133 @@ slackBot.action("back_home", async ({ body, ack, client }) => {
 
 // Users select action handlers
 slackBot.action("users_select_1", async ({ body, ack }) => {
-	await ack();
-	const userId = body.user.id;
-	const selectedUser = body.actions[0].selected_user;
-	if (!userSelections[userId]) {
-		userSelections[userId] = { dontPair: [] };
-	}
-	userSelections[userId].dontPair[0] = selectedUser;
+    await ack();
+    const userId = body.user.id;
+    const selectedUser = body.actions[0].selected_user;
+
+    // Initialize userSelections if it doesn't exist
+    if (!userSelections[userId]) {
+        userSelections[userId] = { dontPair: [] };
+    }
+
+    // Hash and store selectedUser
+    userSelections[userId].dontPair[0] = await hashUserId(selectedUser);
 });
 
 slackBot.action("users_select_2", async ({ body, ack }) => {
-	await ack();
-	const userId = body.user.id;
-	const selectedUser = body.actions[0].selected_user;
-	if (!userSelections[userId]) {
-		userSelections[userId] = { dontPair: [] };
-	}
-	userSelections[userId].dontPair[1] = selectedUser;
+    await ack();
+    const userId = body.user.id;
+    const selectedUser = body.actions[0].selected_user;
+
+    // Initialize userSelections if it doesn't exist
+    if (!userSelections[userId]) {
+        userSelections[userId] = { dontPair: [] };
+    }
+
+    // Hash and store selectedUser
+    userSelections[userId].dontPair[1] = await hashUserId(selectedUser);
 });
 
 // Save button action handler
 slackBot.action("save_preferences", async ({ body, ack, client }) => {
-	await ack();
-	const userId = body.user.id;
+    await ack();
+    const userId = body.user.id;
 
-	try {
-		let dinuBotData = db.doc("InternalProjects/DinuBot");
-		let documentSnapshot = await dinuBotData.get();
-		let membersData = documentSnapshot.data()["Members"];
-		let user = membersData.members.find((member) => member.id === userId);
+    try {
+        let dinuBotData = db.doc("InternalProjects/DinuBot");
+        let documentSnapshot = await dinuBotData.get();
+        let membersData = documentSnapshot.data()["Members"];
+        let user = membersData.members.find((member) => member.id === userId);
 
-		let selectedUsers = [];
-		if (userSelections[userId]) {
-			if (userSelections[userId].dontPair[0]) {
-				selectedUsers.push(userSelections[userId].dontPair[0]);
-			}
-			if (userSelections[userId].dontPair[1]) {
-				selectedUsers.push(userSelections[userId].dontPair[1]);
-			}
-		}
+        let selectedUsers = [];
+        if (userSelections[userId] && userSelections[userId].dontPair) {
+            if (userSelections[userId].dontPair[0]) {
+                selectedUsers.push(userSelections[userId].dontPair[0]);
+            }
+            if (userSelections[userId].dontPair[1]) {
+                selectedUsers.push(userSelections[userId].dontPair[1]);
+            }
+        }
 
-		if (user.dontPair.length >= 2) {
-			// User already has 2 blocked users
-			await client.views.publish({
-				user_id: userId,
-				view: {
-					type: "home",
-					callback_id: "home_view",
-					blocks: [
-						{
-							type: "section",
-							text: {
-								type: "mrkdwn",
-								text: "You already have too many people blocked! Please hit reset. :warning:",
-							},
-						},
-						{
-							type: "actions",
-							elements: [
-								{
-									type: "button",
-									text: {
-										type: "plain_text",
-										text: "Back Home",
-										emoji: true,
-									},
-									action_id: "back_home",
-								},
-							],
-						},
-					],
-				},
-			});
-		} else {
-			// Update the user's dontPair array
-			membersData.members = membersData.members.map((member) => {
-				if (member.id === userId) {
-					member.dontPair = userSelections[userId].dontPair;
-				}
-				return member;
-			});
+        if (user && user.dontPair && user.dontPair.length >= 2) {
+            // User already has 2 blocked users
+            await client.views.publish({
+                user_id: userId,
+                view: {
+                    type: "home",
+                    callback_id: "home_view",
+                    blocks: [
+                        {
+                            type: "section",
+                            text: {
+                                type: "mrkdwn",
+                                text: "You already have too many people blocked! Please hit reset. :warning:",
+                            },
+                        },
+                        {
+                            type: "actions",
+                            elements: [
+                                {
+                                    type: "button",
+                                    text: {
+                                        type: "plain_text",
+                                        text: "Back Home",
+                                        emoji: true,
+                                    },
+                                    action_id: "back_home",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+        } else {
+            // Update the user's dontPair array
+            membersData.members = membersData.members.map((member) => {
+                if (member.id === userId) {
+                    member.dontPair = userSelections[userId]?.dontPair || [];
+                }
+                return member;
+            });
 
-			userSelections = {};
-			await dinuBotData.update({ Members: membersData });
+            userSelections = {}; // Clear user selections after save
+            await dinuBotData.update({ Members: membersData });
 
-			// Refresh the Home tab view
-			await client.views.publish({
-				user_id: userId,
-				view: {
-					type: "home",
-					callback_id: "home_view",
-					blocks: [
-						{
-							type: "section",
-							text: {
-								type: "mrkdwn",
-								text: "Your Dont Pair List has been saved successfully! :white_check_mark:",
-							},
-						},
-						{
-							type: "actions",
-							elements: [
-								{
-									type: "button",
-									text: {
-										type: "plain_text",
-										text: "Back Home",
-										emoji: true,
-									},
-									action_id: "back_home",
-								},
-							],
-						},
-					],
-				},
-			});
-		}
-	} catch (error) {
-		console.error("Error saving preferences:", error);
-	}
+            // Refresh the Home tab view
+            await client.views.publish({
+                user_id: userId,
+                view: {
+                    type: "home",
+                    callback_id: "home_view",
+                    blocks: [
+                        {
+                            type: "section",
+                            text: {
+                                type: "mrkdwn",
+                                text: "Your Don't Pair List has been saved successfully! :white_check_mark:",
+                            },
+                        },
+                        {
+                            type: "actions",
+                            elements: [
+                                {
+                                    type: "button",
+                                    text: {
+                                        type: "plain_text",
+                                        text: "Back Home",
+                                        emoji: true,
+                                    },
+                                    action_id: "back_home",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+        }
+    } catch (error) {
+        console.error("Error saving preferences:", error);
+    }
 });
 
 // Reset button action handler
@@ -701,6 +710,30 @@ slackBot.action({ callback_id: "donutCheckin" }, async ({ ack, body, say }) => {
 		console.error("Error handling action:", error);
 	}
 });
+
+// Hashes user ID using bcrypt
+async function hashUserId(userId) {
+	const saltRounds = 10;
+    try {
+        const hashedUserId = await bcrypt.hash(userId, saltRounds);
+        return hashedUserId;
+    } catch (error) {
+        console.error("Error hashing userId:", error);
+        throw error;
+    }
+}
+
+// Verifies user-provided ID against its hashed version
+async function verifyUserId(userId, hashedUserId) {
+    try {
+        const match = await bcrypt.compare(userId, hashedUserId);
+        return match;
+    } catch (error) {
+        console.error("Error verifying userId:", error);
+        throw error;
+    }
+}
+
 
 const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	try {
