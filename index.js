@@ -53,8 +53,8 @@ async function getUserFullName(userId) {
 	}
 }
 
-// Home tab event listener
-slackBot.event("app_home_opened", async ({ event, client, logger }) => {
+// Function to publish the home view
+async function publishHomeView(user_id, client) {
 	try {
 		// Fetch user data from Firebase
 		const dinuBotData = db.doc("InternalProjects/DinuBot");
@@ -63,23 +63,25 @@ slackBot.event("app_home_opened", async ({ event, client, logger }) => {
 		let optInStatus = null;
 
 		// Looks for the user who pressed home to fetch their user preferences
+		let user;
 		membersData.members.forEach((member) => {
-			if (member.id === event.user) {
-				// Assuming event.user contains the user ID
+			if (member.id === user_id) {
+				// Assuming user_id contains the user ID
 				optInStatus = member.optIn;
+				user = member;
 			}
 		});
 
 		// Fetch display names for blocked users
 		let blockedUserNames = [];
-		membersData.members.forEach((member) => {
-			if (member.id === event.user) {
-				// Assuming event.user contains the user ID
-				for (const blockedMember of member.dontPair) {
-					blockedUserNames.push(blockedMember);
-				}
-			}
-		});
+		if (user) {
+			const blockedUsersPromises = user.dontPair.map(
+				async (blockedMember) => {
+					return await getUserFullName(blockedMember);
+				},
+			);
+			blockedUserNames = await Promise.all(blockedUsersPromises);
+		}
 
 		// Create text to display blocked users
 		const blockedUsersText =
@@ -94,7 +96,7 @@ slackBot.event("app_home_opened", async ({ event, client, logger }) => {
 
 		// Publish updated view to Slack
 		await client.views.publish({
-			user_id: event.user,
+			user_id: user_id,
 			view: {
 				type: "home",
 				blocks: [
@@ -124,7 +126,7 @@ slackBot.event("app_home_opened", async ({ event, client, logger }) => {
 									text: buttonText,
 									emoji: true,
 								},
-								value: event.user,
+								value: user_id,
 								action_id: "opt_out",
 							},
 						],
@@ -206,6 +208,11 @@ slackBot.event("app_home_opened", async ({ event, client, logger }) => {
 	} catch (error) {
 		logger.error("Error publishing view:", error);
 	}
+}
+
+// Home tab event listener
+slackBot.event("app_home_opened", async ({ event, client }) => {
+	await publishHomeView(event.user, client);
 });
 
 // Opt-out button action handler
@@ -292,159 +299,7 @@ slackBot.action("opt_out", async ({ body, ack, client }) => {
 // Back home button action handler
 slackBot.action("back_home", async ({ body, ack, client }) => {
 	await ack();
-	const userId = body.user.id;
-
-	try {
-		// Fetch user data from Firebase
-		const dinuBotData = db.doc("InternalProjects/DinuBot");
-		const documentSnapshot = await dinuBotData.get();
-		const membersData = documentSnapshot.data()["Members"];
-		let optInStatus = null;
-
-		// Looks for the user who pressed home to fetch their user preferences
-		membersData.members.forEach((member) => {
-			if (member.id === userId) {
-				// Assuming userId contains the user ID
-				optInStatus = member.optIn;
-			}
-		});
-
-		// Determine button text based on optInStatus
-		const buttonText = optInStatus
-			? ":red_circle: Opt-out"
-			: ":large_green_circle: Opt-in";
-
-		// Fetch display names for blocked users
-		let blockedUserNames = [];
-		membersData.members.forEach((member) => {
-			if (member.id === userId) {
-				// Assuming event.user contains the user ID
-				for (const blockedMember of member.dontPair) {
-					blockedUserNames.push(blockedMember);
-				}
-			}
-		});
-
-		// Create text to display blocked users
-		const blockedUsersText =
-			blockedUserNames.length > 0
-				? `You have blocked: ${blockedUserNames.join(", ")}`
-				: "You have not blocked any users.";
-
-		// Publish updated view to Slack
-		await client.views.publish({
-			user_id: userId,
-			view: {
-				type: "home",
-				blocks: [
-					{
-						type: "header",
-						text: {
-							type: "plain_text",
-							text: ":gear: Settings",
-							emoji: true,
-						},
-					},
-					{
-						type: "section",
-						text: {
-							type: "plain_text",
-							text: "Set your preferences with Dinubot. Opt-out out of the next rotation until you manually opt-in again.",
-							emoji: true,
-						},
-					},
-					{
-						type: "actions",
-						elements: [
-							{
-								type: "button",
-								text: {
-									type: "plain_text",
-									text: buttonText,
-									emoji: true,
-								},
-								value: userId,
-								action_id: "opt_out",
-							},
-						],
-					},
-					{
-						type: "section",
-						text: {
-							type: "plain_text",
-							text: "You can set your preference to prevent being matched with someone—maximum 2 users at a time.",
-							emoji: true,
-						},
-					},
-					{
-						type: "section",
-						text: {
-							type: "mrkdwn",
-							text: "Don't pair me with...",
-						},
-						accessory: {
-							type: "users_select",
-							placeholder: {
-								type: "plain_text",
-								text: "Select a user",
-								emoji: true,
-							},
-							action_id: "users_select_1",
-						},
-					},
-					{
-						type: "section",
-						text: {
-							type: "mrkdwn",
-							text: "Don't pair me with...",
-						},
-						accessory: {
-							type: "users_select",
-							placeholder: {
-								type: "plain_text",
-								text: "Select a user",
-								emoji: true,
-							},
-							action_id: "users_select_2",
-						},
-					},
-					{
-						type: "section",
-						text: {
-							type: "plain_text",
-							text: blockedUsersText,
-							emoji: true,
-						},
-					},
-					{
-						type: "actions",
-						elements: [
-							{
-								type: "button",
-								text: {
-									type: "plain_text",
-									text: "Save",
-									emoji: true,
-								},
-								action_id: "save_preferences",
-							},
-							{
-								type: "button",
-								text: {
-									type: "plain_text",
-									text: "Reset",
-									emoji: true,
-								},
-								action_id: "reset_preferences",
-							},
-						],
-					},
-				],
-			},
-		});
-	} catch (error) {
-		console.error("Error publishing view:", error);
-	}
+	await publishHomeView(body.user.id, client);
 });
 
 // Users select action handlers
