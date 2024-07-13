@@ -32,6 +32,27 @@ const slackBot = new App({
 
 let userSelections = {}; // To store user selections
 
+// Helper function to get user full name by Slack user ID
+async function getUserFullName(userId) {
+	try {
+		const response = await slackClient.users.info({ user: userId });
+		if (response.ok) {
+			const profile = response.user.profile;
+			const firstName = profile.first_name || "";
+			const lastName = profile.last_name || "";
+			return `${firstName} ${lastName}`.trim();
+		} else {
+			throw new Error(`Error fetching user info: ${response.error}`);
+		}
+	} catch (error) {
+		console.error(
+			`Failed to retrieve user info for user ID ${userId}:`,
+			error,
+		);
+		return userId; // Fallback to user ID if API call fails
+	}
+}
+
 // Home tab event listener
 slackBot.event("app_home_opened", async ({ event, client, logger }) => {
 	try {
@@ -48,6 +69,23 @@ slackBot.event("app_home_opened", async ({ event, client, logger }) => {
 				optInStatus = member.optIn;
 			}
 		});
+
+		// Fetch display names for blocked users
+		let blockedUserNames = [];
+		membersData.members.forEach((member) => {
+			if (member.id === event.user) {
+				// Assuming event.user contains the user ID
+				for (const blockedMember of member.dontPair) {
+					blockedUserNames.push(blockedMember);
+				}
+			}
+		});
+
+		// Create text to display blocked users
+		const blockedUsersText =
+			blockedUserNames.length > 0
+				? `You have blocked: ${blockedUserNames.join(", ")}`
+				: "You have not blocked any users.";
 
 		// Determine button text based on optInStatus
 		const buttonText = optInStatus
@@ -132,6 +170,14 @@ slackBot.event("app_home_opened", async ({ event, client, logger }) => {
 						},
 					},
 					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: blockedUsersText,
+							emoji: true,
+						},
+					},
+					{
 						type: "actions",
 						elements: [
 							{
@@ -167,6 +213,22 @@ slackBot.action("opt_out", async ({ body, ack, client }) => {
 	await ack();
 
 	const userId = body.user.id;
+
+	await client.views.update({
+		view_id: body.view.id,
+		view: {
+			type: "home",
+			blocks: [
+				{
+					type: "section",
+					text: {
+						type: "mrkdwn",
+						text: "Processing your request... :hourglass_flowing_sand:",
+					},
+				},
+			],
+		},
+	});
 
 	// Update Firebase to set the opt-out status for the user
 	try {
@@ -252,6 +314,23 @@ slackBot.action("back_home", async ({ body, ack, client }) => {
 			? ":red_circle: Opt-out"
 			: ":large_green_circle: Opt-in";
 
+		// Fetch display names for blocked users
+		let blockedUserNames = [];
+		membersData.members.forEach((member) => {
+			if (member.id === userId) {
+				// Assuming event.user contains the user ID
+				for (const blockedMember of member.dontPair) {
+					blockedUserNames.push(blockedMember);
+				}
+			}
+		});
+
+		// Create text to display blocked users
+		const blockedUsersText =
+			blockedUserNames.length > 0
+				? `You have blocked: ${blockedUserNames.join(", ")}`
+				: "You have not blocked any users.";
+
 		// Publish updated view to Slack
 		await client.views.publish({
 			user_id: userId,
@@ -327,6 +406,14 @@ slackBot.action("back_home", async ({ body, ack, client }) => {
 								emoji: true,
 							},
 							action_id: "users_select_2",
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: blockedUsersText,
+							emoji: true,
 						},
 					},
 					{
