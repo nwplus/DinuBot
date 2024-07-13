@@ -5,7 +5,7 @@ const { formatUserIds, convertTimeStamp } = require("./src/utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore"); // Import Firestore related functions
-const bcrypt = require('bcrypt'); // import bcrypt library for encryption
+const crypto = require('crypto'); // for encryption
 
 require("dotenv").config();
 
@@ -32,6 +32,47 @@ const slackBot = new App({
 });
 
 let userSelections = {}; // To store user selections
+let secretKey = crypto.randomBytes(32); 
+let iv = crypto.randomBytes(16); 
+let decryptCounter = 0; 
+
+// Encryption function
+function encrypt(userID) {
+    try {
+		console.log('reached encrypt function!');
+        let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(secretKey), Buffer.from(iv, 'hex'));
+        let encrypted = cipher.update(userID, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return encrypted;
+    } catch (error) {
+        console.error('Encryption error:', error);
+        return null;
+    }
+}
+
+// Decryption function
+function decrypt(encryptedUserID) {
+    try {
+		console.log('reached decrypt function!');
+        let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(secretKey), Buffer.from(iv, 'hex'));
+        let decrypted = decipher.update(encryptedUserID, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+
+		// Increment the decrypt counter
+        decryptCounter++;
+        // Check if decryptCounter reaches 2, then update secretKey and iv
+        if (decryptCounter === 2) {
+            secretKey = crypto.randomBytes(32);
+			iv = crypto.randomBytes(16);
+            decryptCounter = 0; // Reset counter
+        }
+
+        return decrypted;
+    } catch (error) {
+        console.error('Decryption error:', error);
+        return null;
+    }
+}
 
 // Helper function to get user full name by Slack user ID
 async function getUserFullName(userId) {
@@ -78,7 +119,7 @@ async function publishHomeView(user_id, client) {
 		if (user) {
 			const blockedUsersPromises = user.dontPair.map(
 				async (blockedMember) => {
-					return await getUserFullName(blockedMember);
+					return await getUserFullName(decrypt(blockedMember));
 				},
 			);
 			blockedUserNames = await Promise.all(blockedUsersPromises);
@@ -314,8 +355,8 @@ slackBot.action("users_select_1", async ({ body, ack }) => {
         userSelections[userId] = { dontPair: [] };
     }
 
-    // Hash and store selectedUser
-    userSelections[userId].dontPair[0] = await hashUserId(selectedUser);
+    // Encrypt and store selectedUser
+    userSelections[userId].dontPair[0] = encrypt(selectedUser);
 });
 
 slackBot.action("users_select_2", async ({ body, ack }) => {
@@ -328,8 +369,8 @@ slackBot.action("users_select_2", async ({ body, ack }) => {
         userSelections[userId] = { dontPair: [] };
     }
 
-    // Hash and store selectedUser
-    userSelections[userId].dontPair[1] = await hashUserId(selectedUser);
+    // Encrypt and store selectedUser
+    userSelections[userId].dontPair[1] = encrypt(selectedUser);
 });
 
 // Save button action handler
@@ -353,7 +394,7 @@ slackBot.action("save_preferences", async ({ body, ack, client }) => {
             }
         }
 
-        if (user && user.dontPair && user.dontPair.length >= 2) {
+        if (user.dontPair.length >= 2) {
             // User already has 2 blocked users
             await client.views.publish({
                 user_id: userId,
@@ -565,30 +606,6 @@ slackBot.action({ callback_id: "donutCheckin" }, async ({ ack, body, say }) => {
 		console.error("Error handling action:", error);
 	}
 });
-
-// Hashes user ID using bcrypt
-async function hashUserId(userId) {
-	const saltRounds = 10;
-    try {
-        const hashedUserId = await bcrypt.hash(userId, saltRounds);
-        return hashedUserId;
-    } catch (error) {
-        console.error("Error hashing userId:", error);
-        throw error;
-    }
-}
-
-// Verifies user-provided ID against its hashed version
-async function verifyUserId(userId, hashedUserId) {
-    try {
-        const match = await bcrypt.compare(userId, hashedUserId);
-        return match;
-    } catch (error) {
-        console.error("Error verifying userId:", error);
-        throw error;
-    }
-}
-
 
 const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	try {
