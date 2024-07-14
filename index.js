@@ -5,7 +5,6 @@ const { formatUserIds, convertTimeStamp } = require("./src/utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore"); // Import Firestore related functions
-const crypto = require('crypto'); // for encryption
 
 require("dotenv").config();
 
@@ -32,69 +31,9 @@ const slackBot = new App({
 });
 
 let userSelections = {}; // To store user selections
-let secretKey = crypto.randomBytes(32); 
-let iv = crypto.randomBytes(16); 
-let decryptCounter = 0; 
 
-// Encryption function
-function encrypt(userID) {
-    try {
-        let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(secretKey), Buffer.from(iv, 'hex'));
-        let encrypted = cipher.update(userID, 'utf8', 'hex');
-        encrypted += cipher.final('hex');
-        return encrypted;
-    } catch (error) {
-        console.error('Encryption error:', error);
-        return null;
-    }
-}
-
-// Decryption function
-function decrypt(encryptedUserID) {
-    try {
-        let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(secretKey), Buffer.from(iv, 'hex'));
-        let decrypted = decipher.update(encryptedUserID, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
-
-		// Increment the decrypt counter
-        decryptCounter++;
-        // Check if decryptCounter reaches 2, then update secretKey and iv
-        if (decryptCounter === 2) {
-            secretKey = crypto.randomBytes(32);
-			iv = crypto.randomBytes(16);
-            decryptCounter = 0; // Reset counter
-        }
-
-        return decrypted;
-    } catch (error) {
-        console.error('Decryption error:', error);
-        return null;
-    }
-}
-
-// Helper function to get user full name by Slack user ID
-async function getUserFullName(userId) {
-	try {
-		const response = await slackClient.users.info({ user: userId });
-		if (response.ok) {
-			const profile = response.user.profile;
-			const firstName = profile.first_name || "";
-			const lastName = profile.last_name || "";
-			return `${firstName} ${lastName}`.trim();
-		} else {
-			throw new Error(`Error fetching user info: ${response.error}`);
-		}
-	} catch (error) {
-		console.error(
-			`Failed to retrieve user info for user ID ${userId}:`,
-			error,
-		);
-		return userId; // Fallback to user ID if API call fails
-	}
-}
-
-// Function to publish the home view
-async function publishHomeView(user_id, client) {
+// Home tab event listener
+slackBot.event("app_home_opened", async ({ event, client, logger }) => {
 	try {
 		// Fetch user data from Firebase
 		const dinuBotData = db.doc("InternalProjects/DinuBot");
@@ -103,31 +42,12 @@ async function publishHomeView(user_id, client) {
 		let optInStatus = null;
 
 		// Looks for the user who pressed home to fetch their user preferences
-		let user;
 		membersData.members.forEach((member) => {
-			if (member.id === user_id) {
-				// Assuming user_id contains the user ID
+			if (member.id === event.user) {
+				// Assuming event.user contains the user ID
 				optInStatus = member.optIn;
-				user = member;
 			}
 		});
-
-		// Fetch display names for blocked users
-		let blockedUserNames = [];
-		if (user) {
-			const blockedUsersPromises = user.dontPair.map(
-				async (blockedMember) => {
-					return await getUserFullName(decrypt(blockedMember));
-				},
-			);
-			blockedUserNames = await Promise.all(blockedUsersPromises);
-		}
-
-		// Create text to display blocked users
-		const blockedUsersText =
-			blockedUserNames.length > 0
-				? `You have blocked: ${blockedUserNames.join(", ")}`
-				: "You have not blocked any users.";
 
 		// Determine button text based on optInStatus
 		const buttonText = optInStatus
@@ -136,7 +56,7 @@ async function publishHomeView(user_id, client) {
 
 		// Publish updated view to Slack
 		await client.views.publish({
-			user_id: user_id,
+			user_id: event.user,
 			view: {
 				type: "home",
 				blocks: [
@@ -166,7 +86,7 @@ async function publishHomeView(user_id, client) {
 									text: buttonText,
 									emoji: true,
 								},
-								value: user_id,
+								value: event.user,
 								action_id: "opt_out",
 							},
 						],
@@ -212,14 +132,6 @@ async function publishHomeView(user_id, client) {
 						},
 					},
 					{
-						type: "section",
-						text: {
-							type: "plain_text",
-							text: blockedUsersText,
-							emoji: true,
-						},
-					},
-					{
 						type: "actions",
 						elements: [
 							{
@@ -248,11 +160,6 @@ async function publishHomeView(user_id, client) {
 	} catch (error) {
 		logger.error("Error publishing view:", error);
 	}
-}
-
-// Home tab event listener
-slackBot.event("app_home_opened", async ({ event, client }) => {
-	await publishHomeView(event.user, client);
 });
 
 // Opt-out button action handler
@@ -260,22 +167,6 @@ slackBot.action("opt_out", async ({ body, ack, client }) => {
 	await ack();
 
 	const userId = body.user.id;
-
-	await client.views.update({
-		view_id: body.view.id,
-		view: {
-			type: "home",
-			blocks: [
-				{
-					type: "section",
-					text: {
-						type: "mrkdwn",
-						text: "Processing your request... :hourglass_flowing_sand:",
-					},
-				},
-			],
-		},
-	});
 
 	// Update Firebase to set the opt-out status for the user
 	try {
@@ -339,138 +230,257 @@ slackBot.action("opt_out", async ({ body, ack, client }) => {
 // Back home button action handler
 slackBot.action("back_home", async ({ body, ack, client }) => {
 	await ack();
-	await publishHomeView(body.user.id, client);
+	const userId = body.user.id;
+
+	try {
+		// Fetch user data from Firebase
+		const dinuBotData = db.doc("InternalProjects/DinuBot");
+		const documentSnapshot = await dinuBotData.get();
+		const membersData = documentSnapshot.data()["Members"];
+		let optInStatus = null;
+
+		// Looks for the user who pressed home to fetch their user preferences
+		membersData.members.forEach((member) => {
+			if (member.id === userId) {
+				// Assuming userId contains the user ID
+				optInStatus = member.optIn;
+			}
+		});
+
+		// Determine button text based on optInStatus
+		const buttonText = optInStatus
+			? ":red_circle: Opt-out"
+			: ":large_green_circle: Opt-in";
+
+		// Publish updated view to Slack
+		await client.views.publish({
+			user_id: userId,
+			view: {
+				type: "home",
+				blocks: [
+					{
+						type: "header",
+						text: {
+							type: "plain_text",
+							text: ":gear: Settings",
+							emoji: true,
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: "Set your preferences with Dinubot. Opt-out out of the next rotation until you manually opt-in again.",
+							emoji: true,
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: buttonText,
+									emoji: true,
+								},
+								value: userId,
+								action_id: "opt_out",
+							},
+						],
+					},
+					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: "You can set your preference to prevent being matched with someone—maximum 2 users at a time.",
+							emoji: true,
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: "Don't pair me with...",
+						},
+						accessory: {
+							type: "users_select",
+							placeholder: {
+								type: "plain_text",
+								text: "Select a user",
+								emoji: true,
+							},
+							action_id: "users_select_1",
+						},
+					},
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: "Don't pair me with...",
+						},
+						accessory: {
+							type: "users_select",
+							placeholder: {
+								type: "plain_text",
+								text: "Select a user",
+								emoji: true,
+							},
+							action_id: "users_select_2",
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: "Save",
+									emoji: true,
+								},
+								action_id: "save_preferences",
+							},
+							{
+								type: "button",
+								text: {
+									type: "plain_text",
+									text: "Reset",
+									emoji: true,
+								},
+								action_id: "reset_preferences",
+							},
+						],
+					},
+				],
+			},
+		});
+	} catch (error) {
+		console.error("Error publishing view:", error);
+	}
 });
 
 // Users select action handlers
 slackBot.action("users_select_1", async ({ body, ack }) => {
-    await ack();
-    const userId = body.user.id;
-    const selectedUser = body.actions[0].selected_user;
-
-    // Initialize userSelections if it doesn't exist
-    if (!userSelections[userId]) {
-        userSelections[userId] = { dontPair: [] };
-    }
-
-    // Encrypt and store selectedUser
-    userSelections[userId].dontPair[0] = encrypt(selectedUser);
+	await ack();
+	const userId = body.user.id;
+	const selectedUser = body.actions[0].selected_user;
+	if (!userSelections[userId]) {
+		userSelections[userId] = { dontPair: [] };
+	}
+	userSelections[userId].dontPair[0] = selectedUser;
 });
 
 slackBot.action("users_select_2", async ({ body, ack }) => {
-    await ack();
-    const userId = body.user.id;
-    const selectedUser = body.actions[0].selected_user;
-
-    // Initialize userSelections if it doesn't exist
-    if (!userSelections[userId]) {
-        userSelections[userId] = { dontPair: [] };
-    }
-
-    // Encrypt and store selectedUser
-    userSelections[userId].dontPair[1] = encrypt(selectedUser);
+	await ack();
+	const userId = body.user.id;
+	const selectedUser = body.actions[0].selected_user;
+	if (!userSelections[userId]) {
+		userSelections[userId] = { dontPair: [] };
+	}
+	userSelections[userId].dontPair[1] = selectedUser;
 });
 
 // Save button action handler
 slackBot.action("save_preferences", async ({ body, ack, client }) => {
-    await ack();
-    const userId = body.user.id;
+	await ack();
+	const userId = body.user.id;
 
-    try {
-        let dinuBotData = db.doc("InternalProjects/DinuBot");
-        let documentSnapshot = await dinuBotData.get();
-        let membersData = documentSnapshot.data()["Members"];
-        let user = membersData.members.find((member) => member.id === userId);
+	try {
+		let dinuBotData = db.doc("InternalProjects/DinuBot");
+		let documentSnapshot = await dinuBotData.get();
+		let membersData = documentSnapshot.data()["Members"];
+		let user = membersData.members.find((member) => member.id === userId);
 
-        let selectedUsers = [];
-        if (userSelections[userId] && userSelections[userId].dontPair) {
-            if (userSelections[userId].dontPair[0]) {
-                selectedUsers.push(userSelections[userId].dontPair[0]);
-            }
-            if (userSelections[userId].dontPair[1]) {
-                selectedUsers.push(userSelections[userId].dontPair[1]);
-            }
-        }
+		let selectedUsers = [];
+		if (userSelections[userId]) {
+			if (userSelections[userId].dontPair[0]) {
+				selectedUsers.push(userSelections[userId].dontPair[0]);
+			}
+			if (userSelections[userId].dontPair[1]) {
+				selectedUsers.push(userSelections[userId].dontPair[1]);
+			}
+		}
 
-        if (user.dontPair.length >= 2) {
-            // User already has 2 blocked users
-            await client.views.publish({
-                user_id: userId,
-                view: {
-                    type: "home",
-                    callback_id: "home_view",
-                    blocks: [
-                        {
-                            type: "section",
-                            text: {
-                                type: "mrkdwn",
-                                text: "You already have too many people blocked! Please hit reset. :warning:",
-                            },
-                        },
-                        {
-                            type: "actions",
-                            elements: [
-                                {
-                                    type: "button",
-                                    text: {
-                                        type: "plain_text",
-                                        text: "Back Home",
-                                        emoji: true,
-                                    },
-                                    action_id: "back_home",
-                                },
-                            ],
-                        },
-                    ],
-                },
-            });
-        } else {
-            // Update the user's dontPair array
-            membersData.members = membersData.members.map((member) => {
-                if (member.id === userId) {
-                    member.dontPair = userSelections[userId]?.dontPair || [];
-                }
-                return member;
-            });
+		if (user.dontPair.length >= 2) {
+			// User already has 2 blocked users
+			await client.views.publish({
+				user_id: userId,
+				view: {
+					type: "home",
+					callback_id: "home_view",
+					blocks: [
+						{
+							type: "section",
+							text: {
+								type: "mrkdwn",
+								text: "You already have too many people blocked! Please hit reset. :warning:",
+							},
+						},
+						{
+							type: "actions",
+							elements: [
+								{
+									type: "button",
+									text: {
+										type: "plain_text",
+										text: "Back Home",
+										emoji: true,
+									},
+									action_id: "back_home",
+								},
+							],
+						},
+					],
+				},
+			});
+		} else {
+			// Update the user's dontPair array
+			membersData.members = membersData.members.map((member) => {
+				if (member.id === userId) {
+					member.dontPair = userSelections[userId].dontPair;
+				}
+				return member;
+			});
 
-            userSelections = {}; // Clear user selections after save
-            await dinuBotData.update({ Members: membersData });
+			userSelections = {};
+			await dinuBotData.update({ Members: membersData });
 
-            // Refresh the Home tab view
-            await client.views.publish({
-                user_id: userId,
-                view: {
-                    type: "home",
-                    callback_id: "home_view",
-                    blocks: [
-                        {
-                            type: "section",
-                            text: {
-                                type: "mrkdwn",
-                                text: "Your Don't Pair List has been saved successfully! :white_check_mark:",
-                            },
-                        },
-                        {
-                            type: "actions",
-                            elements: [
-                                {
-                                    type: "button",
-                                    text: {
-                                        type: "plain_text",
-                                        text: "Back Home",
-                                        emoji: true,
-                                    },
-                                    action_id: "back_home",
-                                },
-                            ],
-                        },
-                    ],
-                },
-            });
-        }
-    } catch (error) {
-        console.error("Error saving preferences:", error);
-    }
+			// Refresh the Home tab view
+			await client.views.publish({
+				user_id: userId,
+				view: {
+					type: "home",
+					callback_id: "home_view",
+					blocks: [
+						{
+							type: "section",
+							text: {
+								type: "mrkdwn",
+								text: "Your Dont Pair List has been saved successfully! :white_check_mark:",
+							},
+						},
+						{
+							type: "actions",
+							elements: [
+								{
+									type: "button",
+									text: {
+										type: "plain_text",
+										text: "Back Home",
+										emoji: true,
+									},
+									action_id: "back_home",
+								},
+							],
+						},
+					],
+				},
+			});
+		}
+	} catch (error) {
+		console.error("Error saving preferences:", error);
+	}
 });
 
 // Reset button action handler
