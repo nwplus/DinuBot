@@ -11,7 +11,7 @@ require("dotenv").config();
 
 initializeApp({
     credential: applicationDefault(),
-    databaseURL: "https://nwplus-ubc-dev.firebaseio.com",
+    databaseURL: process.env.databaseURL,
 });
 
 // Initialize Firebase
