@@ -245,7 +245,7 @@ async function publishHomeView(user_id, client) {
 			},
 		});
 	} catch (error) {
-		logger.error("Error publishing view:", error);
+		console.log("Error publishing view:", error);
 	}
 }
 
