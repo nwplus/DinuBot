@@ -39,7 +39,6 @@ let decryptCounter = 0;
 // Encryption function
 function encrypt(userID) {
     try {
-		console.log('reached encrypt function!');
         let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(secretKey), Buffer.from(iv, 'hex'));
         let encrypted = cipher.update(userID, 'utf8', 'hex');
         encrypted += cipher.final('hex');
@@ -53,7 +52,6 @@ function encrypt(userID) {
 // Decryption function
 function decrypt(encryptedUserID) {
     try {
-		console.log('reached decrypt function!');
         let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(secretKey), Buffer.from(iv, 'hex'));
         let decrypted = decipher.update(encryptedUserID, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
