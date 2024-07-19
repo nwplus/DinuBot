@@ -1,6 +1,6 @@
 services:
   dinubot:
-    image: lsha0730/dinubot
+    image: nwplus/dinubot
     build: .
     env_file:
       - .env
