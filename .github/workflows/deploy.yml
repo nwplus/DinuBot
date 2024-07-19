@@ -29,17 +29,35 @@ jobs:
         with:
           push: true
           tags: nwplus/dinubot:latest
+      - 
+        name: Upload systemd service file
+        uses: actions/upload-artifact@v3
+        with:
+          name: dinubot-service-file
+          path: ./dinubot.service
 
   deploy:
     runs-on: self-hosted
     needs: dockerize
 
     steps:
+    - name: Download systemd service file
+      uses: actions/download-artifact@v3
+      with:
+        name: dinubot-service-file
+        path: .
+
     - name: Pull Docker image
       run: docker pull nwplus/dinubot:latest
 
-    - name: Run Docker container
+    - name: Copy systemd service file
+      run: sudo cp dinubot.service /etc/systemd/system/dinubot.service
+
+    - name: Reload systemd daemon
+      run: sudo systemctl daemon-reload
+
+    - name: Enable and start Dinubot service
       run: |
-        docker stop dinubot || true
-        docker rm dinubot || true
-        docker run -d -p 8000:8000 --name dinubot nwplus/dinubot:latest
+        sudo systemctl enable dinubot
+        sudo systemctl start dinubot
+
