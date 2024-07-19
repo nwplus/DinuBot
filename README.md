@@ -22,20 +22,12 @@ Remember to set up `.env` and `service_account.json`.
 
 ## Deploying
 
-Make sure you have docker and docker-compose installed.
-Put docker-compose.yml, service_account.json, and .env in the same directory.
-Navigate to that directory and run:
+Push the new version to the production branch in Github. GitHub Actions will pull, build and deploy the code.
 
-```
-sudo docker pull lsha0730/docker
-sudo docker compose up -d
-```
-
-Dinubot will run in the background.
-Add a --build flag to the end if the directory the docker-compose.yml file is in also has the project files and you want to re-build the image locally
-Check to see if its running with `sudo docker ps`
-
-Spin it down with `sudo docker compose down`
+Note: If you've changed the .env or service_account.json files, update them on the server by either:
+1. Repository settings -> Security -> Secrets and Variables -> Actions -> Repository Secrets.
+    Then goto the Actions tab and dispatch the 'Refresh Secrets on Server' workflow.
+2. OR, push changes to the production branch. Refreshing secrets is part of the build workflow.
 
 
 ## Contributing
