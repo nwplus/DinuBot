@@ -546,7 +546,7 @@ slackBot.command("/dinustatus", async ({ command, ack, say }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: "*Status update:* DinuBot is up and running :fire::fire:",
+				text: "*Status update:* DinuBot is up and running :fire:",
 			},
 			accessory: {
 				type: "image",
