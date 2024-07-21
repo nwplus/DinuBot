@@ -35,20 +35,32 @@ jobs:
         with:
           name: dinubot-service-file
           path: ./dinubot.service
+      - 
+        name: Upload docker-compose file
+        uses: actions/upload-artifact@v3
+        with:
+          name: dinubot-docker-compose
+          path: ./docker-compose.yml
 
   deploy:
     runs-on: self-hosted
     needs: dockerize
 
     steps:
+    - name: Pull Docker image
+      run: docker pull nwplus/dinubot:latest
+
     - name: Download systemd service file
       uses: actions/download-artifact@v3
       with:
         name: dinubot-service-file
         path: .
 
-    - name: Pull Docker image
-      run: docker pull nwplus/dinubot:latest
+    - name: Download docker-compose file
+      uses: actions/download-artifact@v3
+      with:
+        name: dinubot-docker-compose
+        path: .
 
     - name: Copy systemd service file
       run: sudo cp dinubot.service /etc/systemd/system/dinubot.service
