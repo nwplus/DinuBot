@@ -125,8 +125,8 @@ async function publishHomeView(user_id, client) {
 		// Create text to display blocked users
 		const blockedUsersText =
 			blockedUserNames.length > 0
-				? `You have blocked: ${blockedUserNames.join(", ")}`
-				: "You have not blocked any users.";
+				? `Don't pair me with: ${blockedUserNames.join(", ")}`
+				: "You have not selected any users for \"don't pair me with\".";
 
 		// Determine button text based on optInStatus
 		const buttonText = optInStatus
@@ -169,6 +169,17 @@ async function publishHomeView(user_id, client) {
 								action_id: "opt_out",
 							},
 						],
+					},
+					{
+						"type": "divider"
+					},
+					{
+						type: "header",
+						text: {
+							type: "plain_text",
+							text: ":x: Don't Pair Me With",
+							emoji: true,
+						},
 					},
 					{
 						type: "section",
@@ -225,7 +236,7 @@ async function publishHomeView(user_id, client) {
 								type: "button",
 								text: {
 									type: "plain_text",
-									text: "Save",
+									text: "Save don't pair me with",
 									emoji: true,
 								},
 								action_id: "save_preferences",
@@ -234,7 +245,7 @@ async function publishHomeView(user_id, client) {
 								type: "button",
 								text: {
 									type: "plain_text",
-									text: "Reset",
+									text: "Reset don't pair me with",
 									emoji: true,
 								},
 								action_id: "reset_preferences",
