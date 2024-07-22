@@ -771,10 +771,10 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 			const matchingString = formatUserIds(matching);
 
-			// createGroupChatAndSendMessage(
-			// 	matchingString,
-			// 	"Hello :wave: you're on a donut ( ͡° ͜ʖ ͡°)!",
-			// );
+			createGroupChatAndSendMessage(
+				matchingString,
+				"Hello :wave: you're on a donut ( ͡° ͜ʖ ͡°)!",
+			);
 		}
 		return [staticArray, updatedDynamicArray];
 	} catch (error) {
