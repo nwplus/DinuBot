@@ -634,7 +634,7 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			try {
 				const sevenDaysFromNow = new Date();
 				// 7 days
-				// sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+				sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
 				// 3 mins - TESTING PURPOSES
 				// sevenDaysFromNow.setTime(sevenDaysFromNow.getTime() + 3 * 60 * 1000); // Adding 3 minutes in milliseconds
