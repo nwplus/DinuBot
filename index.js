@@ -633,11 +633,15 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 
 			try {
 				const sevenDaysFromNow = new Date();
+				const twelveDaysFromNow = new Date();
 				// 7 days
 				sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+				// 12 days
+				twelveDaysFromNow.setDate(twelveDaysFromNow.getDate() + 12);
 
 				// 3 mins - TESTING PURPOSES
 				// sevenDaysFromNow.setTime(sevenDaysFromNow.getTime() + 3 * 60 * 1000); // Adding 3 minutes in milliseconds
+				// twelveDaysFromNow.setTime(twelveDaysFromNow.getTime() + 4 * 60 * 1000); // Adding 4 minutes in milliseconds
 
 				// schedules message
 				const checkinMessage = await slackClient.chat.scheduleMessage({
@@ -673,6 +677,42 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 					],
 					post_at: Math.floor(sevenDaysFromNow.getTime() / 1000),
 				});
+
+				// schedules message
+				const checkinMessageTwo = await slackClient.chat.scheduleMessage({
+					channel: conversation.channel.id,
+					text: "Just checking in again incase the above has changed! The next round of donuts go out on Monday! Did you meet yet? :eyes:",
+					attachments: [
+						{
+							text: "Click the button below:",
+							fallback:
+								"You are unable to interact with this button.",
+							callback_id: "donutCheckin",
+							actions: [
+								{
+									name: "button",
+									text: "Yes :white_check_mark:",
+									type: "button",
+									value: "didDonut",
+								},
+								{
+									name: "button",
+									text: "It's scheduled :spiral_calendar_pad:",
+									type: "button",
+									value: "scheduled",
+								},
+								{
+									name: "button",
+									text: "Not yet :x:",
+									type: "button",
+									value: "notScheduled",
+								},
+							],
+						},
+					],
+					post_at: Math.floor(twelveDaysFromNow.getTime() / 1000),
+				});
+
 			} catch (error) {
 				console.error(error);
 			}
