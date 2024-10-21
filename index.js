@@ -822,10 +822,10 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 			const matchingString = formatUserIds(matching);
 
-			// createGroupChatAndSendMessage(
-			// 	matchingString,
-			// 	"Hello :wave: you're on a donut ( ͡° ͜ʖ ͡°)!",
-			// );
+			createGroupChatAndSendMessage(
+				matchingString,
+				"Hello :wave: you're on a donut ( ͡° ͜ʖ ͡°)!",
+			);
 		}
 		return [staticArray, updatedDynamicArray];
 	} catch (error) {
@@ -1040,7 +1040,7 @@ const timeForDonutScheduler = async () => {
 
 // runs interval to schedule donuts and update variables
 // change this to 30 later, only need to run this every 30mins, not 0.2mins
-const minutes = 2,
+const minutes = 30,
 	the_interval = minutes * 60 * 1000;
 setInterval(function () {
 	// Check if donuts should be sent
