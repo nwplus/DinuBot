@@ -1,6 +1,6 @@
 # DinuBot
 
-How DinuBot pairs people together
+How DinuBot pairs people together:
 ![DinuBot Pairing Diagram](./images/dinubotAlgo.png)
 
 <!--- Brief description of the project and what it's used for] -->
