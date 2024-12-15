@@ -745,16 +745,14 @@ const pairMembers = async (staticArray, dynamicArray) => {
 			channel: channelID,
 		});
 
-		// -------------- If member is not in either static or dynamic array, add them
-
 		let dinuBotData = db.doc("InternalProjects/DinuBot");
 		let documentSnapshot = await dinuBotData.get();
 		let membersData = documentSnapshot.data()["Members"] || { members: [] };
 
 		let matched = false;
-
-		// TO DO: Implement cycle update feature (update both arrays once the dynamic array has gone through a full cycle)
+		let matchings = [];
 		let counter = 0;
+
 		while (!matched) {
 			console.log(counter);
 			counter += 1;
@@ -762,13 +760,15 @@ const pairMembers = async (staticArray, dynamicArray) => {
 			if (counter > 500) {
 				slackClient.chat.postMessage({
 					channel: channelID,
-					text: "No donuts possible, too many members are opted-out or blocked!"});
+					text: "No donuts possible, too many members are opted-out or blocked!",
+				});
 				break;
 			}
 
 			[matchings, updatedDynamicArray] = createMatchings(
 				staticArray,
 				dynamicArray,
+				4 // Specify group size
 			);
 
 			console.log(matchings);
@@ -777,29 +777,17 @@ const pairMembers = async (staticArray, dynamicArray) => {
 				return group.every((userA, _, arr) => {
 					return arr.every((userB) => {
 						if (userA === userB) return true;
+
 						const memberA = membersData.members.find(
-							(member) => member.id === userA,
+							(member) => member.id === userA
 						);
 						const memberB = membersData.members.find(
-							(member) => member.id === userB,
+							(member) => member.id === userB
 						);
-						
-						// Decrypt all dontPairs
-						memberAdontPair = []
-						memberBdontPair = []
-						if (memberA.dontPair[0] != null) {
-							memberAdontPair[0] = decrypt(memberA.dontPair[0]);
-						}
-						if (memberA.dontPair[1] != null) {
-							memberAdontPair[1] = decrypt(memberA.dontPair[1]);
-						}
 
-						if (memberB.dontPair[0] != null) {
-							memberBdontPair[0] = decrypt(memberB.dontPair[0]);
-						}
-						if (memberB.dontPair[1] != null) {
-							memberBdontPair[1] = decrypt(memberB.dontPair[1]);
-						}
+						// Decrypt all dontPairs
+						let memberAdontPair = memberA?.dontPair?.map(decrypt) || [];
+						let memberBdontPair = memberB?.dontPair?.map(decrypt) || [];
 
 						return (
 							!memberAdontPair.includes(userB) &&
@@ -810,9 +798,9 @@ const pairMembers = async (staticArray, dynamicArray) => {
 			});
 		}
 
-		for (matching of matchings) {
+		for (const matching of matchings) {
 			const displayNames = [];
-			for (userId of matching) {
+			for (const userId of matching) {
 				const userInfo = await slackClient.users.info({
 					user: userId,
 				});
@@ -824,7 +812,7 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 			createGroupChatAndSendMessage(
 				matchingString,
-				"Hello :wave: you're on a donut ( ͡° ͜ʖ ͡°)!",
+				"Hello :wave: you're on a group donut ( ͡° ͜ʖ ͡°)!"
 			);
 		}
 		return [staticArray, updatedDynamicArray];
@@ -1040,7 +1028,7 @@ const timeForDonutScheduler = async () => {
 
 // runs interval to schedule donuts and update variables
 // change this to 30 later, only need to run this every 30mins, not 0.2mins
-const minutes = 30,
+const minutes = 0.2,
 	the_interval = minutes * 60 * 1000;
 setInterval(function () {
 	// Check if donuts should be sent

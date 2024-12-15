@@ -1,36 +1,31 @@
-const updateDynamicArray = (dynamicArray) => {
-	const lastDynamicArrayMember = dynamicArray[dynamicArray.length - 1];
-	const dynamicArrayCopy = dynamicArray.slice();
-	for (let i = 0; i < dynamicArray.length; i++) {
-		if (i + 1 < dynamicArray.length) {
-			dynamicArray[i + 1] = dynamicArrayCopy[i];
-		}
+// Updated createMatchings function to form groups of 4
+const createMatchings = (staticArray, dynamicArray, groupSize = 4) => {
+	const allMembers = [...staticArray, ...dynamicArray];
+	const shuffledMembers = shuffleArray(allMembers);
+	const matchings = [];
+
+	// Form groups of the specified size
+	while (shuffledMembers.length >= groupSize) {
+		matchings.push(shuffledMembers.splice(0, groupSize));
 	}
-	dynamicArray[0] = lastDynamicArrayMember;
-	return dynamicArray;
+
+	// Handle remaining members (if group size isn't divisible evenly)
+	if (shuffledMembers.length > 0) {
+		matchings.push(shuffledMembers);
+	}
+
+	// Return the matchings and updated dynamic array
+	const updatedDynamicArray = shuffledMembers;
+	return [matchings, updatedDynamicArray];
 };
 
-const createMatchings = (staticArray, dynamicArray) => {
-	const matchings = [];
-	// assumes dynamic array length is = staticArray or 1 longer
-	// Match users based on their array position (note: staticArray will never > dynamicArray)
-	for (let i = 0; i < staticArray.length; i++) {
-		matchings.push([staticArray[i], dynamicArray[i]]);
+// Helper function to shuffle array
+const shuffleArray = (array) => {
+	for (let i = array.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[array[i], array[j]] = [array[j], array[i]];
 	}
-	// if dynamicArray length is > staticArray (Should only be different by 1)
-	if (dynamicArray.length > staticArray.length) {
-		const leftOutMember = dynamicArray[dynamicArray.length - 1];
-		// add that leftOutMember to a random group
-		const randomPairIndex = Math.floor(
-			Math.random() * (matchings.length - 1),
-		);
-		matchings[randomPairIndex].push(leftOutMember);
-	}
-
-	// move dynamic array forward
-	newDynamicArray = updateDynamicArray(dynamicArray);
-
-	return [matchings, newDynamicArray];
+	return array;
 };
 
 module.exports = { createMatchings };
