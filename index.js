@@ -5,13 +5,13 @@ const { formatUserIds, convertTimeStamp } = require("./src/utils");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
-const crypto = require('crypto');
+const crypto = require("crypto");
 
 require("dotenv").config();
 
 initializeApp({
-    credential: applicationDefault(),
-    databaseURL: process.env.databaseURL,
+	credential: applicationDefault(),
+	databaseURL: process.env.databaseURL,
 });
 
 // Initialize Firebase
@@ -25,47 +25,47 @@ const channelID = process.env.channelID;
 const slackClient = new WebClient(botToken);
 
 const slackBot = new App({
-    token: botToken,
-    signingSecret: botSigningSecret,
-    socketMode: true,
-    appToken: botAppToken,
+	token: botToken,
+	signingSecret: botSigningSecret,
+	socketMode: true,
+	appToken: botAppToken,
 });
 
 let userSelections = {}; // To store user selections
 
-const secretKey = Buffer.from(process.env.SECRET_KEY, 'hex');
-const iv = Buffer.from(process.env.IV, 'hex');
+const secretKey = Buffer.from(process.env.SECRET_KEY, "hex");
+const iv = Buffer.from(process.env.IV, "hex");
 
-console.log("Secret key: ")
+console.log("Secret key: ");
 console.log(secretKey);
-console.log("IV: ")
+console.log("IV: ");
 console.log(iv);
 
 // Encryption function
 function encrypt(userID) {
-    try {
-        let cipher = crypto.createCipheriv('aes-256-cbc', secretKey, iv);
-        let encrypted = cipher.update(userID, 'utf8', 'hex');
-        encrypted += cipher.final('hex');
-        return encrypted;
-    } catch (error) {
-        console.error('Encryption error:', error);
-        return null;
-    }
+	try {
+		let cipher = crypto.createCipheriv("aes-256-cbc", secretKey, iv);
+		let encrypted = cipher.update(userID, "utf8", "hex");
+		encrypted += cipher.final("hex");
+		return encrypted;
+	} catch (error) {
+		console.error("Encryption error:", error);
+		return null;
+	}
 }
 
 // Decryption function
 function decrypt(encryptedUserID) {
-    try {
-        let decipher = crypto.createDecipheriv('aes-256-cbc', secretKey, iv);
-        let decrypted = decipher.update(encryptedUserID, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
+	try {
+		let decipher = crypto.createDecipheriv("aes-256-cbc", secretKey, iv);
+		let decrypted = decipher.update(encryptedUserID, "hex", "utf8");
+		decrypted += decipher.final("utf8");
 
-        return decrypted;
-    } catch (error) {
-        console.error('Decryption error:', error);
-        return null;
-    }
+		return decrypted;
+	} catch (error) {
+		console.error("Decryption error:", error);
+		return null;
+	}
 }
 
 // Helper function to get user full name by Slack user ID
@@ -109,7 +109,7 @@ async function publishHomeView(user_id, client) {
 		});
 
 		// Fetch display names for blocked users
-		let blockedUserNames = ['...', '...'];
+		let blockedUserNames = ["...", "..."];
 		if (user) {
 			const blockedUsersPromises = user.dontPair.map(
 				async (blockedMember) => {
@@ -126,7 +126,7 @@ async function publishHomeView(user_id, client) {
 		const blockedUsersText =
 			blockedUserNames.length > 0
 				? `Don't pair me with: ${blockedUserNames.join(", ")}`
-				: "You have not selected any users for \"don't pair me with\".";
+				: 'You have not selected any users for "don\'t pair me with".';
 
 		// Determine button text based on optInStatus
 		const buttonText = optInStatus
@@ -171,7 +171,7 @@ async function publishHomeView(user_id, client) {
 						],
 					},
 					{
-						"type": "divider"
+						type: "divider",
 					},
 					{
 						type: "header",
@@ -354,133 +354,133 @@ slackBot.action("back_home", async ({ body, ack, client }) => {
 
 // Users select action handlers
 slackBot.action("users_select_1", async ({ body, ack }) => {
-    await ack();
-    const userId = body.user.id;
-    const selectedUser = body.actions[0].selected_user;
+	await ack();
+	const userId = body.user.id;
+	const selectedUser = body.actions[0].selected_user;
 
-    // Initialize userSelections if it doesn't exist
-    if (!userSelections[userId]) {
-        userSelections[userId] = { dontPair: [] };
-    }
+	// Initialize userSelections if it doesn't exist
+	if (!userSelections[userId]) {
+		userSelections[userId] = { dontPair: [] };
+	}
 
-    // Encrypt and store selectedUser
-    userSelections[userId].dontPair[0] = encrypt(selectedUser);
+	// Encrypt and store selectedUser
+	userSelections[userId].dontPair[0] = encrypt(selectedUser);
 });
 
 slackBot.action("users_select_2", async ({ body, ack }) => {
-    await ack();
-    const userId = body.user.id;
-    const selectedUser = body.actions[0].selected_user;
+	await ack();
+	const userId = body.user.id;
+	const selectedUser = body.actions[0].selected_user;
 
-    // Initialize userSelections if it doesn't exist
-    if (!userSelections[userId]) {
-        userSelections[userId] = { dontPair: [] };
-    }
+	// Initialize userSelections if it doesn't exist
+	if (!userSelections[userId]) {
+		userSelections[userId] = { dontPair: [] };
+	}
 
-    // Encrypt and store selectedUser
-    userSelections[userId].dontPair[1] = encrypt(selectedUser);
+	// Encrypt and store selectedUser
+	userSelections[userId].dontPair[1] = encrypt(selectedUser);
 });
 
 // Save button action handler
 slackBot.action("save_preferences", async ({ body, ack, client }) => {
-    await ack();
-    const userId = body.user.id;
+	await ack();
+	const userId = body.user.id;
 
-    try {
-        let dinuBotData = db.doc("InternalProjects/DinuBot");
-        let documentSnapshot = await dinuBotData.get();
-        let membersData = documentSnapshot.data()["Members"];
-        let user = membersData.members.find((member) => member.id === userId);
+	try {
+		let dinuBotData = db.doc("InternalProjects/DinuBot");
+		let documentSnapshot = await dinuBotData.get();
+		let membersData = documentSnapshot.data()["Members"];
+		let user = membersData.members.find((member) => member.id === userId);
 
-        let selectedUsers = [];
-        if (userSelections[userId] && userSelections[userId].dontPair) {
-            if (userSelections[userId].dontPair[0]) {
-                selectedUsers.push(userSelections[userId].dontPair[0]);
-            }
-            if (userSelections[userId].dontPair[1]) {
-                selectedUsers.push(userSelections[userId].dontPair[1]);
-            }
-        }
+		let selectedUsers = [];
+		if (userSelections[userId] && userSelections[userId].dontPair) {
+			if (userSelections[userId].dontPair[0]) {
+				selectedUsers.push(userSelections[userId].dontPair[0]);
+			}
+			if (userSelections[userId].dontPair[1]) {
+				selectedUsers.push(userSelections[userId].dontPair[1]);
+			}
+		}
 
-        if (user.dontPair.length >= 2) {
-            // User already has 2 blocked users
-            await client.views.publish({
-                user_id: userId,
-                view: {
-                    type: "home",
-                    callback_id: "home_view",
-                    blocks: [
-                        {
-                            type: "section",
-                            text: {
-                                type: "mrkdwn",
-                                text: "You already have too many people blocked! Please hit reset. :warning:",
-                            },
-                        },
-                        {
-                            type: "actions",
-                            elements: [
-                                {
-                                    type: "button",
-                                    text: {
-                                        type: "plain_text",
-                                        text: "Back Home",
-                                        emoji: true,
-                                    },
-                                    action_id: "back_home",
-                                },
-                            ],
-                        },
-                    ],
-                },
-            });
-        } else {
-            // Update the user's dontPair array
-            membersData.members = membersData.members.map((member) => {
-                if (member.id === userId) {
-                    member.dontPair = userSelections[userId]?.dontPair || [];
-                }
-                return member;
-            });
+		if (user.dontPair.length >= 2) {
+			// User already has 2 blocked users
+			await client.views.publish({
+				user_id: userId,
+				view: {
+					type: "home",
+					callback_id: "home_view",
+					blocks: [
+						{
+							type: "section",
+							text: {
+								type: "mrkdwn",
+								text: "You already have too many people blocked! Please hit reset. :warning:",
+							},
+						},
+						{
+							type: "actions",
+							elements: [
+								{
+									type: "button",
+									text: {
+										type: "plain_text",
+										text: "Back Home",
+										emoji: true,
+									},
+									action_id: "back_home",
+								},
+							],
+						},
+					],
+				},
+			});
+		} else {
+			// Update the user's dontPair array
+			membersData.members = membersData.members.map((member) => {
+				if (member.id === userId) {
+					member.dontPair = userSelections[userId]?.dontPair || [];
+				}
+				return member;
+			});
 
-            userSelections = {}; // Clear user selections after save
-            await dinuBotData.update({ Members: membersData });
+			userSelections = {}; // Clear user selections after save
+			await dinuBotData.update({ Members: membersData });
 
-            // Refresh the Home tab view
-            await client.views.publish({
-                user_id: userId,
-                view: {
-                    type: "home",
-                    callback_id: "home_view",
-                    blocks: [
-                        {
-                            type: "section",
-                            text: {
-                                type: "mrkdwn",
-                                text: "Your Don't Pair List has been saved successfully! :white_check_mark:",
-                            },
-                        },
-                        {
-                            type: "actions",
-                            elements: [
-                                {
-                                    type: "button",
-                                    text: {
-                                        type: "plain_text",
-                                        text: "Back Home",
-                                        emoji: true,
-                                    },
-                                    action_id: "back_home",
-                                },
-                            ],
-                        },
-                    ],
-                },
-            });
-        }
-    } catch (error) {
-        console.error("Error saving preferences:", error);
-    }
+			// Refresh the Home tab view
+			await client.views.publish({
+				user_id: userId,
+				view: {
+					type: "home",
+					callback_id: "home_view",
+					blocks: [
+						{
+							type: "section",
+							text: {
+								type: "mrkdwn",
+								text: "Your Don't Pair List has been saved successfully! :white_check_mark:",
+							},
+						},
+						{
+							type: "actions",
+							elements: [
+								{
+									type: "button",
+									text: {
+										type: "plain_text",
+										text: "Back Home",
+										emoji: true,
+									},
+									action_id: "back_home",
+								},
+							],
+						},
+					],
+				},
+			});
+		}
+	} catch (error) {
+		console.error("Error saving preferences:", error);
+	}
 });
 
 // Reset button action handler
@@ -679,40 +679,40 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 				});
 
 				// schedules message
-				const checkinMessageTwo = await slackClient.chat.scheduleMessage({
-					channel: conversation.channel.id,
-					text: "Just checking in again incase the above has changed! The next round of donuts go out on Monday! Did you meet yet? :eyes:",
-					attachments: [
-						{
-							text: "Click the button below:",
-							fallback:
-								"You are unable to interact with this button.",
-							callback_id: "donutCheckin",
-							actions: [
-								{
-									name: "button",
-									text: "Yes :white_check_mark:",
-									type: "button",
-									value: "didDonut",
-								},
-								{
-									name: "button",
-									text: "It's scheduled :spiral_calendar_pad:",
-									type: "button",
-									value: "scheduled",
-								},
-								{
-									name: "button",
-									text: "Not yet :x:",
-									type: "button",
-									value: "notScheduled",
-								},
-							],
-						},
-					],
-					post_at: Math.floor(twelveDaysFromNow.getTime() / 1000),
-				});
-
+				const checkinMessageTwo =
+					await slackClient.chat.scheduleMessage({
+						channel: conversation.channel.id,
+						text: "Just checking in again incase the above has changed! The next round of donuts go out on Monday! Did you meet yet? :eyes:",
+						attachments: [
+							{
+								text: "Click the button below:",
+								fallback:
+									"You are unable to interact with this button.",
+								callback_id: "donutCheckin",
+								actions: [
+									{
+										name: "button",
+										text: "Yes :white_check_mark:",
+										type: "button",
+										value: "didDonut",
+									},
+									{
+										name: "button",
+										text: "It's scheduled :spiral_calendar_pad:",
+										type: "button",
+										value: "scheduled",
+									},
+									{
+										name: "button",
+										text: "Not yet :x:",
+										type: "button",
+										value: "notScheduled",
+									},
+								],
+							},
+						],
+						post_at: Math.floor(twelveDaysFromNow.getTime() / 1000),
+					});
 			} catch (error) {
 				console.error(error);
 			}
@@ -768,7 +768,7 @@ const pairMembers = async (staticArray, dynamicArray) => {
 			[matchings, updatedDynamicArray] = createMatchings(
 				staticArray,
 				dynamicArray,
-				4 // Specify group size
+				4, // Specify group size
 			);
 
 			console.log(matchings);
@@ -779,15 +779,17 @@ const pairMembers = async (staticArray, dynamicArray) => {
 						if (userA === userB) return true;
 
 						const memberA = membersData.members.find(
-							(member) => member.id === userA
+							(member) => member.id === userA,
 						);
 						const memberB = membersData.members.find(
-							(member) => member.id === userB
+							(member) => member.id === userB,
 						);
 
 						// Decrypt all dontPairs
-						let memberAdontPair = memberA?.dontPair?.map(decrypt) || [];
-						let memberBdontPair = memberB?.dontPair?.map(decrypt) || [];
+						let memberAdontPair =
+							memberA?.dontPair?.map(decrypt) || [];
+						let memberBdontPair =
+							memberB?.dontPair?.map(decrypt) || [];
 
 						return (
 							!memberAdontPair.includes(userB) &&
@@ -812,7 +814,7 @@ const pairMembers = async (staticArray, dynamicArray) => {
 
 			createGroupChatAndSendMessage(
 				matchingString,
-				"Hello :wave: you're on a group donut ( ͡° ͜ʖ ͡°)!"
+				"Hello :wave: you're on a group donut ( ͡° ͜ʖ ͡°)!",
 			);
 		}
 		return [staticArray, updatedDynamicArray];
@@ -849,6 +851,7 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 				dontPair: [],
 				id: memberID,
 				optIn: true,
+				optOutCycles: 0,
 			});
 		});
 	} else {
@@ -859,6 +862,7 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 					dontPair: [],
 					id: memberID,
 					optIn: true,
+					optOutCycles: 0,
 				});
 			}
 		});
@@ -928,6 +932,19 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 		}
 	}
 
+	membersData = membersData.map((member) => {
+		if (!member.optIn) {
+			member.optOutCycles += 1;
+			if (member.optOutCycles >= 2) {
+				member.optIn = true;
+				member.optOutCycles = 0;
+			}
+		}
+		return member;
+	});
+
+	await dinuBotData.update({ Members: { members: membersData } });
+
 	return [staticArray, dynamicArray];
 };
 
@@ -959,7 +976,10 @@ const timeForDonutScheduler = async () => {
 
 					let pairingsData = documentSnapshot.data()["Pairs"];
 					for (const pairings of pairingsData["pairs"]) {
-						if (pairings["status"] == "didDonut" || pairings["status"] == "scheduled") {
+						if (
+							pairings["status"] == "didDonut" ||
+							pairings["status"] == "scheduled"
+						) {
 							pairingsMet += 1;
 						}
 					}
