@@ -151,7 +151,7 @@ async function publishHomeView(user_id, client) {
 						type: "section",
 						text: {
 							type: "plain_text",
-							text: "Set your preferences with Dinubot. Opt-out out of the next rotation until you manually opt-in again.",
+							text: "Set your preferences with Dinubot. Opt-out of the next rotation until you manually opt-in again. If 2 cycles have passed, you will automatically be opted in.",
 							emoji: true,
 						},
 					},
