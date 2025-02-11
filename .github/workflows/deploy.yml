@@ -32,13 +32,13 @@ jobs:
           tags: nwplus/dinubot:latest
       - 
         name: Upload systemd service file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dinubot-service-file
           path: ./dinubot.service
       - 
         name: Upload docker-compose file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dinubot-docker-compose
           path: ./docker-compose.yml
@@ -52,7 +52,7 @@ jobs:
       run: docker pull nwplus/dinubot:latest
 
     - name: Download systemd service file
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: dinubot-service-file
         path: .
