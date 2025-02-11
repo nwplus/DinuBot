@@ -768,7 +768,7 @@ const pairMembers = async (staticArray, dynamicArray) => {
 			[matchings, updatedDynamicArray] = createMatchings(
 				staticArray,
 				dynamicArray,
-				4, // Specify group size
+				2, // Specify group size
 			);
 
 			console.log(matchings);
