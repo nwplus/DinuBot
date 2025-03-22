@@ -1,5 +1,5 @@
 // Updated createMatchings function to form groups of 4
-const createMatchings = (staticArray, dynamicArray, groupSize = 4) => {
+const createMatchings = (staticArray, dynamicArray, groupSize = 2) => {
 	const allMembers = [...staticArray, ...dynamicArray];
 	const shuffledMembers = shuffleArray(allMembers);
 	const matchings = [];
