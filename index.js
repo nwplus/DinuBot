@@ -738,13 +738,9 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	}
 };
 
-const pairMembers = async (staticArray, dynamicArray) => {
+const pairMembers = async (memberArray) => {
 	const channelID = process.env.channelID;
 	try {
-		const membersInfo = await slackClient.conversations.members({
-			channel: channelID,
-		});
-
 		let dinuBotData = db.doc("InternalProjects/DinuBot");
 		let documentSnapshot = await dinuBotData.get();
 		let membersData = documentSnapshot.data()["Members"] || { members: [] };
@@ -762,12 +758,11 @@ const pairMembers = async (staticArray, dynamicArray) => {
 					channel: channelID,
 					text: "No donuts possible, too many members are opted-out or blocked!",
 				});
-				break;
+				return;
 			}
 
-			[matchings, updatedDynamicArray] = createMatchings(
-				staticArray,
-				dynamicArray,
+			matchings = createMatchings(
+				memberArray,
 				2, // Specify group size
 			);
 
@@ -843,13 +838,12 @@ const pairMembers = async (staticArray, dynamicArray) => {
 				"Hello :wave: you're on a group donut ( ͡° ͜ʖ ͡°)!",
 			);
 		}
-		return [staticArray, updatedDynamicArray];
 	} catch (error) {
 		console.error("Error creating matching:", error);
 	}
 };
 
-const updateMemberArrays = async (staticArray, dynamicArray) => {
+const updateMemberArrays = async () => {
 	// Temporarily multiple channel ids for dev
 	const channelID = process.env.channelID;
 
@@ -875,6 +869,7 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 		memberIDs.forEach((memberID) => {
 			membersData.members.push({
 				dontPair: [],
+				lastPairings: [],
 				id: memberID,
 				optIn: true,
 				optOutCycles: 0,
@@ -886,6 +881,7 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 			if (!membersData.members.some((member) => member.id === memberID)) {
 				membersData.members.push({
 					dontPair: [],
+					lastPairings: [],
 					id: memberID,
 					optIn: true,
 					optOutCycles: 0,
@@ -901,36 +897,36 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 
 	await dinuBotData.update({ Members: membersData });
 
-	// checks to see if anyone has left the channel, if so, reset both arrays
-	for (const staticMember of staticArray) {
-		if (!memberIDs.includes(staticMember)) {
-			staticArray = [];
-			dynamicArray = [];
-		}
-	}
-	for (const dynamicMember of dynamicArray) {
-		if (!memberIDs.includes(dynamicMember)) {
-			staticArray = [];
-			dynamicArray = [];
-		}
-	}
+	// // checks to see if anyone has left the channel, if so, reset both arrays
+	// for (const staticMember of staticArray) {
+	// 	if (!memberIDs.includes(staticMember)) {
+	// 		staticArray = [];
+	// 		dynamicArray = [];
+	// 	}
+	// }
+	// for (const dynamicMember of dynamicArray) {
+	// 	if (!memberIDs.includes(dynamicMember)) {
+	// 		staticArray = [];
+	// 		dynamicArray = [];
+	// 	}
+	// }
 
 	// shuffle memberIDs (incase members in channel changes)
-	const shuffledMemberIDs = memberIDs.sort((a, b) => 0.5 - Math.random());
+	// const shuffledMemberIDs = memberIDs.sort((a, b) => 0.5 - Math.random());
 
-	for (const memberID of shuffledMemberIDs) {
-		// if memberID is not in either arrays
-		if (
-			!(staticArray.includes(memberID) || dynamicArray.includes(memberID))
-		) {
-			// dynamicArray should > or = to staticArray
-			if (staticArray.length == dynamicArray.length) {
-				dynamicArray.push(memberID);
-			} else {
-				staticArray.push(memberID);
-			}
-		}
-	}
+	// for (const memberID of shuffledMemberIDs) {
+	// 	// if memberID is not in either arrays
+	// 	if (
+	// 		!(staticArray.includes(memberID) || dynamicArray.includes(memberID))
+	// 	) {
+	// 		// dynamicArray should > or = to staticArray
+	// 		if (staticArray.length == dynamicArray.length) {
+	// 			dynamicArray.push(memberID);
+	// 		} else {
+	// 			staticArray.push(memberID);
+	// 		}
+	// 	}
+	// }
 
 	// Grab data from Firebase to get members who opted out
 	documentSnapshot = await dinuBotData.get();
@@ -941,26 +937,26 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 		.map((member) => member.id);
 
 	// Remove opted-out members from dynamic and static arrays
-	dynamicArray = dynamicArray.filter((member) => !optOut.includes(member));
-	staticArray = staticArray.filter((member) => !optOut.includes(member));
+	// dynamicArray = dynamicArray.filter((member) => !optOut.includes(member));
+	// staticArray = staticArray.filter((member) => !optOut.includes(member));
 
 	// Rebalance static and dynamic arrays
-	while (true) {
-		const lengthDifference = dynamicArray.length - staticArray.length;
-		if (lengthDifference === 0 || lengthDifference === 1) {
-			break;
-		}
+	// while (true) {
+	// 	const lengthDifference = dynamicArray.length - staticArray.length;
+	// 	if (lengthDifference === 0 || lengthDifference === 1) {
+	// 		break;
+	// 	}
 
-		if (dynamicArray.length > staticArray.length) {
-			staticArray.push(dynamicArray.pop());
-		} else {
-			dynamicArray.push(staticArray.pop());
-		}
-	}
+	// 	if (dynamicArray.length > staticArray.length) {
+	// 		staticArray.push(dynamicArray.pop());
+	// 	} else {
+	// 		dynamicArray.push(staticArray.pop());
+	// 	}
+	// }
 
 	membersData = membersData.map((member) => {
 		if (!member.optIn) {
-			member.optOutCycles += 1;
+			member.optOutCycles = (member.optOutCycles || 0) + 1;
 			if (member.optOutCycles >= 2) {
 				member.optIn = true;
 				member.optOutCycles = 0;
@@ -971,7 +967,8 @@ const updateMemberArrays = async (staticArray, dynamicArray) => {
 
 	await dinuBotData.update({ Members: { members: membersData } });
 
-	return [staticArray, dynamicArray];
+	const activeMemberIDs = memberIDs.filter(id => !optOut.includes(id));
+	return activeMemberIDs;
 };
 
 // Determines if it's time to send out new donuts (runs on interval)
@@ -1032,23 +1029,11 @@ const timeForDonutScheduler = async () => {
 				});
 
 				// get current member arrays
-				let currentStaticArray =
-					statusData["groupOfMembers"]["groupOfMembersStatic"];
-				let currentDynamicArray =
-					statusData["groupOfMembers"]["groupOfMembersDynamic"];
-				updateMemberArrays(
-					currentStaticArray,
-					currentDynamicArray,
-				).then((updatedArrays) => {
-					pairMembers(updatedArrays[0], updatedArrays[1]).then(
-						 (updatedArrays) => {
+				updateMemberArrays()
+				.then((optedInMemberIds) => {
+					pairMembers(optedInMemberIds).then(
+						 () => {
 							// pair people up
-							statusData["groupOfMembers"][
-								"groupOfMembersStatic"
-							] = updatedArrays[0]; // even if it's static, update it in case members join/leave
-							statusData["groupOfMembers"][
-								"groupOfMembersDynamic"
-							] = updatedArrays[1];
 							const nextDonutDate = new Date();
 							nextDonutDate.setDate(nextDonutDate.getDate() + 14);
 							statusData["schedule"]["nextDonut"]["sent"] = true; // set sent to True (is this necessary?)
