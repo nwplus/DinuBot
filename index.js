@@ -791,14 +791,40 @@ const pairMembers = async (staticArray, dynamicArray) => {
 						let memberBdontPair =
 							memberB?.dontPair?.map(decrypt) || [];
 
+						let memberALastPairings = memberA?.lastPairings?.map(decrypt) || [];
+						let memberBLastPairings = memberB?.lastPairings?.map(decrypt) || [];
+
 						return (
 							!memberAdontPair.includes(userB) &&
-							!memberBdontPair.includes(userA)
+							!memberBdontPair.includes(userA) && 
+							!memberALastPairings.includes(userB) &&
+							!memberBLastPairings.includes(userA)
 						);
 					});
 				});
 			});
 		}
+
+		for (const matching of matchings) {
+			for (let i = 0; i < matching.length; i++) {
+				const userA = matching[i];
+				const memberA = membersData.members.find((member) => member.id === userA);
+				if (!memberA.lastPairings) {
+					memberA.lastPairings = [];
+				}
+				for (let j = 0; j < matching.length; j++) {
+					if (i !== j) {
+						const userB = matching[j];
+						memberA.lastPairings.unshift(encrypt(userB));
+					}
+				}
+				while (memberA.lastPairings.length > 5) {
+					memberA.lastPairings.pop();
+				}
+			}	
+		}
+
+		await dinuBotData.update({ Members: membersData });
 
 		for (const matching of matchings) {
 			const displayNames = [];
@@ -955,7 +981,7 @@ const timeForDonutScheduler = async () => {
 		let statusData = documentSnapshot.data()["Status"];
 		convertTimeStamp(
 			statusData["schedule"]["nextDonut"]["dateToPairMembers"],
-		).then(function (nextDonutDay) {
+		).then( (nextDonutDay) => {
 			const nextDonutDate = nextDonutDay[0];
 			const nextDonutHour = nextDonutDay[1];
 			// Today
@@ -1013,9 +1039,9 @@ const timeForDonutScheduler = async () => {
 				updateMemberArrays(
 					currentStaticArray,
 					currentDynamicArray,
-				).then(function (updatedArrays) {
+				).then((updatedArrays) => {
 					pairMembers(updatedArrays[0], updatedArrays[1]).then(
-						function (updatedArrays) {
+						 (updatedArrays) => {
 							// pair people up
 							statusData["groupOfMembers"][
 								"groupOfMembersStatic"
@@ -1034,7 +1060,7 @@ const timeForDonutScheduler = async () => {
 							dinuBotData.firestore
 								.doc("InternalProjects/DinuBot")
 								.update({ Status: statusData });
-						},
+						}
 					);
 				});
 			} else {
