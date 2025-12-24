@@ -897,36 +897,6 @@ const updateMemberArrays = async () => {
 
 	await dinuBotData.update({ Members: membersData });
 
-	// // checks to see if anyone has left the channel, if so, reset both arrays
-	// for (const staticMember of staticArray) {
-	// 	if (!memberIDs.includes(staticMember)) {
-	// 		staticArray = [];
-	// 		dynamicArray = [];
-	// 	}
-	// }
-	// for (const dynamicMember of dynamicArray) {
-	// 	if (!memberIDs.includes(dynamicMember)) {
-	// 		staticArray = [];
-	// 		dynamicArray = [];
-	// 	}
-	// }
-
-	// shuffle memberIDs (incase members in channel changes)
-	// const shuffledMemberIDs = memberIDs.sort((a, b) => 0.5 - Math.random());
-
-	// for (const memberID of shuffledMemberIDs) {
-	// 	// if memberID is not in either arrays
-	// 	if (
-	// 		!(staticArray.includes(memberID) || dynamicArray.includes(memberID))
-	// 	) {
-	// 		// dynamicArray should > or = to staticArray
-	// 		if (staticArray.length == dynamicArray.length) {
-	// 			dynamicArray.push(memberID);
-	// 		} else {
-	// 			staticArray.push(memberID);
-	// 		}
-	// 	}
-	// }
 
 	// Grab data from Firebase to get members who opted out
 	documentSnapshot = await dinuBotData.get();
@@ -936,23 +906,6 @@ const updateMemberArrays = async () => {
 		.filter((member) => !member.optIn)
 		.map((member) => member.id);
 
-	// Remove opted-out members from dynamic and static arrays
-	// dynamicArray = dynamicArray.filter((member) => !optOut.includes(member));
-	// staticArray = staticArray.filter((member) => !optOut.includes(member));
-
-	// Rebalance static and dynamic arrays
-	// while (true) {
-	// 	const lengthDifference = dynamicArray.length - staticArray.length;
-	// 	if (lengthDifference === 0 || lengthDifference === 1) {
-	// 		break;
-	// 	}
-
-	// 	if (dynamicArray.length > staticArray.length) {
-	// 		staticArray.push(dynamicArray.pop());
-	// 	} else {
-	// 		dynamicArray.push(staticArray.pop());
-	// 	}
-	// }
 
 	membersData = membersData.map((member) => {
 		if (!member.optIn) {
