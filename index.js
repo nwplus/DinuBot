@@ -718,20 +718,17 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			}
 
 			// Add groups to firebase
-			let dinuBotData = db.doc("InternalProjects/DinuBot");
-			dinuBotData.get().then((documentSnapshot) => {
-				let pairingsData = documentSnapshot.data()["Pairs"];
+			const dinuBotData = db.doc("InternalProjects/DinuBot");
+			const docSnap = await dinuBotData.get();
+			const pairingsData = docSnap.data()["Pairs"];
 
-				pairingsData["pairs"].push({
-					groupChatID: conversation.channel.id,
-					members: userIds.split(","),
-					status: "Not yet",
-				});
-
-				dinuBotData.firestore
-					.doc("InternalProjects/DinuBot")
-					.update({ Pairs: pairingsData });
+			pairingsData["pairs"].push({
+				groupChatID: conversation.channel.id,
+				members: userIds.split(","),
+				status: "Not yet",
 			});
+
+			await dinuBotData.update({ Pairs: pairingsData });
 		}
 	} catch (error) {
 		console.error("Error creating group chat and sending message:", error);
@@ -833,7 +830,7 @@ const pairMembers = async (memberArray) => {
 
 			const matchingString = formatUserIds(matching);
 
-			createGroupChatAndSendMessage(
+			await createGroupChatAndSendMessage(
 				matchingString,
 				"Hello :wave: you're on a group donut ( ͡° ͜ʖ ͡°)!",
 			);
@@ -926,93 +923,85 @@ const updateMemberArrays = async () => {
 
 // Determines if it's time to send out new donuts (runs on interval)
 const timeForDonutScheduler = async () => {
-	let dinuBotData = db.doc("InternalProjects/DinuBot");
-	dinuBotData.get().then((documentSnapshot) => {
-		let statusData = documentSnapshot.data()["Status"];
-		convertTimeStamp(
+	try {
+		const dinuBotData = db.doc("InternalProjects/DinuBot");
+		const documentSnapshot = await dinuBotData.get();
+		const statusData = documentSnapshot.data()["Status"];
+
+		const nextDonutDay = await convertTimeStamp(
 			statusData["schedule"]["nextDonut"]["dateToPairMembers"],
-		).then( (nextDonutDay) => {
-			const nextDonutDate = nextDonutDay[0];
-			const nextDonutHour = nextDonutDay[1];
-			// Today
-			const today = new Date();
-			const currentDate =
-				today.getFullYear() +
-				"-" +
-				today.getMonth() +
-				"-" +
-				today.getDate();
-			const currentHour = today.getHours();
-			// Determine if we should pair members up now
-			if (currentDate == nextDonutDate && currentHour == nextDonutHour) {
-				// Send weekly summary message
-				let dinuBotData = db.doc("InternalProjects/DinuBot");
-				dinuBotData.get().then((documentSnapshot) => {
-					let pairingsMet = 0;
+		);
+		const nextDonutDate = nextDonutDay[0];
+		const nextDonutHour = nextDonutDay[1];
 
-					let pairingsData = documentSnapshot.data()["Pairs"];
-					for (const pairings of pairingsData["pairs"]) {
-						if (
-							pairings["status"] == "didDonut" ||
-							pairings["status"] == "scheduled"
-						) {
-							pairingsMet += 1;
-						}
-					}
+		const today = new Date();
+		const currentDate =
+			today.getFullYear() +
+			"-" +
+			today.getMonth() +
+			"-" +
+			today.getDate();
+		const currentHour = today.getHours();
 
-					let pairingsMetPercent = (
-						(pairingsMet / pairingsData["pairs"].length) *
-						100
-					).toFixed(0);
-
-					slackClient.chat.postMessage({
-						channel: channelID,
-						text:
-							":bar_chart: Weekly Summary: " +
-							pairingsMetPercent +
-							"%" +
-							" of the groups met, let's get that to 100% this week!",
-					});
-
-					// Clear Pairings on firebase
-					pairingsData["pairs"] = [];
-					dinuBotData.firestore
-						.doc("InternalProjects/DinuBot")
-						.update({ Pairs: pairingsData });
-				});
-
-				// get current member arrays
-				updateMemberArrays()
-				.then((optedInMemberIds) => {
-					pairMembers(optedInMemberIds).then(
-						 () => {
-							// pair people up
-							const nextDonutDate = new Date();
-							nextDonutDate.setDate(nextDonutDate.getDate() + 14);
-							statusData["schedule"]["nextDonut"]["sent"] = true; // set sent to True (is this necessary?)
-							statusData["schedule"]["nextDonut"][
-								"dateToPairMembers"
-							] = nextDonutDate; // set next donut date
-							statusData["schedule"]["nextDonut"]["sent"] = false; // set sent to False (is this necessary?)
-							// update data
-							dinuBotData.firestore
-								.doc("InternalProjects/DinuBot")
-								.update({ Status: statusData });
-						}
-					);
-				});
-			} else {
-				console.log("Not time for donut yet");
+		if (
+			currentDate == nextDonutDate &&
+			currentHour == nextDonutHour &&
+			!statusData["schedule"]["nextDonut"]["sent"]
+		) {
+			// Lock: mark as sent immediately to prevent concurrent runs
+			statusData["schedule"]["nextDonut"]["sent"] = true;
+			await dinuBotData.update({ Status: statusData });
+			
+			const pairingsData = documentSnapshot.data()["Pairs"];
+			let pairingsMet = 0;
+			for (const pairing of pairingsData["pairs"]) {
+				if (
+					pairing["status"] == "didDonut" ||
+					pairing["status"] == "scheduled"
+				) {
+					pairingsMet += 1;
+				}
 			}
-		});
-	});
+
+			const pairingsMetPercent =
+				pairingsData["pairs"].length > 0
+					? ((pairingsMet / pairingsData["pairs"].length) * 100).toFixed(0)
+					: "0";
+
+			await slackClient.chat.postMessage({
+				channel: channelID,
+				text:
+					":bar_chart: Weekly Summary: " +
+					pairingsMetPercent +
+					"%" +
+					" of the groups met, let's get that to 100% this week!",
+			});
+
+			pairingsData["pairs"] = [];
+			await dinuBotData.update({ Pairs: pairingsData });
+
+			// Create new pairings
+			const optedInMemberIds = await updateMemberArrays();
+			await pairMembers(optedInMemberIds);
+
+			// Unlock: set next donut date and reset sent flag for next cycle
+			const nextDate = new Date();
+			nextDate.setDate(nextDate.getDate() + 14);
+			statusData["schedule"]["nextDonut"]["dateToPairMembers"] = nextDate;
+			statusData["schedule"]["nextDonut"]["sent"] = false;
+			await dinuBotData.update({ Status: statusData });
+		} else {
+			console.log("Not time for donut yet");
+		}
+	} catch (error) {
+		console.error("Error in timeForDonutScheduler:", error);
+	}
 };
 
 // Production
 
 // runs interval to schedule donuts and update variables
-// change this to 30 later, only need to run this every 30mins, not 0.2mins
-const minutes = 0.2,
+const minutes = 30,
 	the_interval = minutes * 60 * 1000;
 setInterval(function () {
 	// Check if donuts should be sent
@@ -1020,13 +1009,5 @@ setInterval(function () {
 }, the_interval);
 
 // ------------------------------------------------------ ^^^
-
-// for testing purposes
-timeForDonutScheduler();
-
-// testing purposes for ticket 1
-test1 = [];
-test2 = [];
-// updateMemberArrays(test1, test2);
 
 slackBot.start(3000);
