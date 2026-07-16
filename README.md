@@ -14,7 +14,7 @@ Note: If you schedule a message, the message will still be sent after you turn o
 ## Running locally (dev)
 
 ```
-yarn install
+pnpm install
 node index.js
 ```
 

@@ -2,3 +2,4 @@
 node_modules/
 service_account.json
 .DS_Store
+.idea/
