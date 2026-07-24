@@ -1,15 +1,17 @@
 FROM node:20-alpine
 
+RUN corepack enable
+
 USER node
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
-RUN yarn install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
 ENV NAME dinubot
 
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]
