@@ -55,10 +55,8 @@ function requireApiKey() {
 async function callOpenAI(prompt) {
 	const apiKey = requireApiKey();
 
-	const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-	const url =
-		process.env.OPENAI_API_URL ||
-		"https://api.openai.com/v1/chat/completions";
+	const model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
+	const url = "https://api.openai.com/v1/chat/completions";
 	const isReasoningNoTemp =
 		/^(o1|o3|o4)/.test(model) ||
 		(model.startsWith("gpt-5") && !model.includes("chat"));
