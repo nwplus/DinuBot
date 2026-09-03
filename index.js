@@ -1026,11 +1026,25 @@ const timeForDonutScheduler = async () => {
 // runs interval to schedule donuts and update variables
 const minutes = 30,
 	the_interval = minutes * 60 * 1000;
-setInterval(function () {
+const schedulerInterval = setInterval(function () {
 	// Check if donuts should be sent
 	timeForDonutScheduler();
 }, the_interval);
 
 // ------------------------------------------------------ ^^^
 
-slackBot.start(3000);
+async function startSlackBot() {
+	try {
+		await slackBot.start();
+		console.log("⚡️ DinuBot is connected to Slack via Socket Mode.");
+	} catch (error) {
+		clearInterval(schedulerInterval);
+		console.error(
+			"❌ DinuBot failed to connect to Slack:",
+			error instanceof Error ? error.message : error,
+		);
+		process.exit(1);
+	}
+}
+
+startSlackBot();
