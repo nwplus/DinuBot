@@ -20,15 +20,19 @@ node index.js
 
 Remember to set up `.env` and `service_account.json`.
 
+Publish settings are stored on the `InternalProjects/DinuBot` Firestore document.
+Set `donutRosterMax` to a positive integer to cap each public donut roster.
+The `/set-donut-roster-max <positive integer>` command updates this value.
+
 ## Deploying
 
 Push the new version to the production branch in Github. GitHub Actions will pull, build and deploy the code.
 
 Note: If you've changed the .env or service_account.json files, update them on the server by either:
-1. Repository settings -> Security -> Secrets and Variables -> Actions -> Repository Secrets.
-    Then goto the Actions tab and dispatch the 'Refresh Secrets on Server' workflow.
-2. OR, push changes to the production branch. Refreshing secrets is part of the build workflow.
 
+1. Repository settings -> Security -> Secrets and Variables -> Actions -> Repository Secrets.
+   Then goto the Actions tab and dispatch the 'Refresh Secrets on Server' workflow.
+2. OR, push changes to the production branch. Refreshing secrets is part of the build workflow.
 
 ## Contributing
 
