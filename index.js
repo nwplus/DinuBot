@@ -2,6 +2,11 @@ const { App } = require("@slack/bolt");
 const { WebClient } = require("@slack/web-api");
 const { createMatchings } = require("./src/matching");
 const { formatUserIds, convertTimeStamp } = require("./src/utils");
+const { registerPublishHandlers } = require("./src/publish/handlers");
+const {
+	buildPublishPromptBlocks,
+	PUBLISH_PROMPT_FALLBACK_TEXT,
+} = require("./src/publish");
 
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -20,7 +25,11 @@ const db = getFirestore();
 const botToken = process.env.token;
 const botSigningSecret = process.env.signingSecret;
 const botAppToken = process.env.appToken;
-const channelID = process.env.channelID;
+function getPairingChannelId() {
+	const channelId = process.env.ALL_MEMBERS_CHANNEL;
+	if (typeof channelId !== "string" || !channelId.trim()) throw new Error("ALL_MEMBERS_CHANNEL is required");
+	return channelId.trim();
+}
 
 const slackClient = new WebClient(botToken);
 
@@ -30,6 +39,15 @@ const slackBot = new App({
 	socketMode: true,
 	appToken: botAppToken,
 });
+
+let cachedBotUserId = null;
+async function getBotUserId(client = slackClient) {
+	if (cachedBotUserId) return cachedBotUserId;
+	const auth = await client.auth.test();
+	if (!auth?.user_id) throw new Error("Slack auth did not return the bot user ID");
+	cachedBotUserId = auth.user_id;
+	return cachedBotUserId;
+}
 
 let userSelections = {}; // To store user selections
 
@@ -615,6 +633,8 @@ slackBot.action({ callback_id: "donutCheckin" }, async ({ ack, body, say }) => {
 	}
 });
 
+registerPublishHandlers(slackBot, slackClient, db, getBotUserId);
+
 const createGroupChatAndSendMessage = async (userIds, messageText) => {
 	try {
 		const conversation = await slackClient.conversations.open({
@@ -622,13 +642,16 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 			return_im: true,
 		});
 
-		const date = new Date();
-		date.setDate(date.getDate());
-
 		if (conversation.ok) {
 			await slackClient.chat.postMessage({
 				channel: conversation.channel.id,
 				text: messageText,
+			});
+
+			await slackClient.chat.postMessage({
+				channel: conversation.channel.id,
+				blocks: buildPublishPromptBlocks(conversation.channel.id),
+				text: PUBLISH_PROMPT_FALLBACK_TEXT,
 			});
 
 			try {
@@ -736,7 +759,7 @@ const createGroupChatAndSendMessage = async (userIds, messageText) => {
 };
 
 const pairMembers = async (memberArray) => {
-	const channelID = process.env.channelID;
+	const channelID = getPairingChannelId();
 	try {
 		let dinuBotData = db.doc("InternalProjects/DinuBot");
 		let documentSnapshot = await dinuBotData.get();
@@ -842,7 +865,7 @@ const pairMembers = async (memberArray) => {
 
 const updateMemberArrays = async () => {
 	// Temporarily multiple channel ids for dev
-	const channelID = process.env.channelID;
+	const channelID = getPairingChannelId();
 
 	const membersInfo = await slackClient.conversations.members({
 		channel: channelID,
@@ -850,7 +873,7 @@ const updateMemberArrays = async () => {
 
 	// Get members in channel + Remove DinuBot from the list of members in a channel so no one gets paired up with it
 	memberIDs = membersInfo.members;
-	const dinubotUserID = "U05A02QR4BU";
+	const dinubotUserID = await getBotUserId(slackClient);
 	const botIndex = memberIDs.indexOf(dinubotUserID);
 	if (botIndex !== -1) {
 		memberIDs.splice(botIndex, 1);
@@ -969,7 +992,7 @@ const timeForDonutScheduler = async () => {
 					: "0";
 
 			await slackClient.chat.postMessage({
-				channel: channelID,
+				channel: getPairingChannelId(),
 				text:
 					":bar_chart: Weekly Summary: " +
 					pairingsMetPercent +
@@ -1003,11 +1026,25 @@ const timeForDonutScheduler = async () => {
 // runs interval to schedule donuts and update variables
 const minutes = 30,
 	the_interval = minutes * 60 * 1000;
-setInterval(function () {
+const schedulerInterval = setInterval(function () {
 	// Check if donuts should be sent
 	timeForDonutScheduler();
 }, the_interval);
 
 // ------------------------------------------------------ ^^^
 
-slackBot.start(3000);
+async function startSlackBot() {
+	try {
+		await slackBot.start();
+		console.log("⚡️ DinuBot is connected to Slack via Socket Mode.");
+	} catch (error) {
+		clearInterval(schedulerInterval);
+		console.error(
+			"❌ DinuBot failed to connect to Slack:",
+			error instanceof Error ? error.message : error,
+		);
+		process.exit(1);
+	}
+}
+
+startSlackBot();
